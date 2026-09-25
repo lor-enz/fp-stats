@@ -126,8 +126,14 @@ def og_tags(title, description, path, image):
     return '\n'.join(lines)
 
 
-def page_shell(title, body, last_updated, description, path, image=None):
+def page_shell(title, body, last_updated, description, path, image=None, show_stale=True):
     ts = last_updated.strftime('%Y-%m-%dT%H:%M:%SZ')
+    # The stale banner is per-page, keyed off this page's own last_updated, so a
+    # single stalled creator can't be masked by others still updating. Suppressed
+    # for intentionally frozen pages (TechDeals) where "over 24h" is expected.
+    stale = ('<div id="stale">&#9888; Data hasn&#39;t updated in over 24&nbsp;hours.</div>\n'
+             f'<script>if(Date.now()-new Date("{ts}")>864e5)'
+             "document.getElementById('stale').style.display='block';</script>\n") if show_stale else ''
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -138,9 +144,7 @@ def page_shell(title, body, last_updated, description, path, image=None):
 <style>{_CSS}</style>
 </head>
 <body>
-<div id="stale">&#9888; Data hasn&#39;t updated in over 24&nbsp;hours.</div>
-<script>if(Date.now()-new Date("{ts}")>864e5)document.getElementById('stale').style.display='block';</script>
-{body}
+{stale}{body}
 <footer>Updated {last_updated.strftime('%Y-%m-%d %H:%M')} UTC &middot; <a href="/">Home</a> &middot; <a href="/creators.html">All creators</a></footer>
 </body>
 </html>"""
@@ -190,7 +194,7 @@ def plot_creator(name, df):
     plt.close(fig)
 
 
-def write_creator_page(name, df, last_updated, note=None):
+def write_creator_page(name, df, last_updated, note=None, show_stale=True):
     slug = creator_filename(name)
     stats = compute_stats(df)
     change = stats['change_30d']
@@ -215,7 +219,7 @@ def write_creator_page(name, df, last_updated, note=None):
     with open(f'{PLOT_FOLDER}/{slug}.html', 'w') as f:
         f.write(page_shell(f'{name} — Floatplane Stats', body, last_updated,
                            description=description, path=f'/{slug}.html',
-                           image=f'/plot_{slug}.png'))
+                           image=f'/plot_{slug}.png', show_stale=show_stale))
 
 
 def write_creators_index(creators_data, techdeals_df, last_updated):
@@ -251,7 +255,7 @@ def write_front_page(ltt_df, last_updated):
 <p>Long-term subscriber history for <a href="https://www.floatplane.com/channel/linustechtips/home">Linus Tech Tips</a>
 on Floatplane &mdash; the only place with data going back this far.</p>
 <div class="stats">
-  <div class="stat"><div class="value">{stats['current']:,}</div><div class="label">subscribers today</div></div>
+  <div class="stat"><div class="value">{stats['current']:,}</div><div class="label">subscribers</div></div>
   <div class="stat"><div class="value">{stats['peak']:,}</div><div class="label">all-time peak</div></div>
   {change_html}
 </div>
@@ -279,29 +283,37 @@ def create_plot():
             continue
         creators_data.append((name, df))
 
-    # last_updated must reflect the newest actual data point, not the moment we
-    # render. This script re-renders hourly even when every scrape fails, so
-    # keying off render time would keep the stale banner hidden during exactly
-    # the silent-failure case it exists to catch. TechDeals is excluded (it left
-    # Floatplane and is intentionally frozen), so it can't drag this backwards.
-    last_times = [df.attrs['last_raw_time'] for _, df in creators_data]
-    last_updated = max(last_times).to_pydatetime() if last_times else datetime.datetime.utcnow()
+    # Each page's last_updated must reflect the newest actual data point *for that
+    # creator*, not render time and not a global max. This script re-renders hourly
+    # even when scrapes fail, so keying off render time would hide the stale banner
+    # during exactly the silent-failure case it exists to catch; a global max would
+    # let one healthy creator mask another that has silently stopped.
+    def creator_last_updated(df):
+        return df.attrs['last_raw_time'].to_pydatetime()
 
     for name, df in creators_data:
         plot_creator(name, df)
-        write_creator_page(name, df, last_updated)
+        write_creator_page(name, df, creator_last_updated(df))
         print(f"Plotted {name}")
 
     techdeals_df = load_creator_data('TechDeals')
     if techdeals_df is not None and not techdeals_df.empty:
         plot_creator('TechDeals', techdeals_df)
-        write_creator_page('TechDeals', techdeals_df, last_updated,
-                           note='TechDeals left Floatplane in April 2026. Historical data is preserved here but no longer being updated.')
+        # Intentionally frozen (left Floatplane), so suppress the stale banner —
+        # its footer honestly shows the April 2026 last reading.
+        write_creator_page('TechDeals', techdeals_df, creator_last_updated(techdeals_df),
+                           note='TechDeals left Floatplane in April 2026. Historical data is preserved here but no longer being updated.',
+                           show_stale=False)
 
-    write_creators_index(creators_data, techdeals_df, last_updated)
+    # The index isn't creator-specific: its banner signals overall pipeline health,
+    # so it uses the newest reading across active creators (TechDeals excluded).
+    active_last = [creator_last_updated(df) for _, df in creators_data]
+    index_last_updated = max(active_last) if active_last else datetime.datetime.utcnow()
+    write_creators_index(creators_data, techdeals_df, index_last_updated)
+
     ltt_df = next((df for name, df in creators_data if name == 'LinusTechTips'), None)
     if ltt_df is not None:
-        write_front_page(ltt_df, last_updated)
+        write_front_page(ltt_df, creator_last_updated(ltt_df))
     print(f"Site written to {PLOT_FOLDER}/")
 
 
