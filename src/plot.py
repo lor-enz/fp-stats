@@ -65,7 +65,11 @@ def load_creator_data(name):
     df['Subscribers'] = pd.to_numeric(df['Subscribers'], errors='coerce')
     df.dropna(subset=['Time', 'Subscribers'], inplace=True)
     df.sort_values('Time', inplace=True)
+    # Keep the true last scrape time before resampling collapses it to midnight,
+    # so last_updated (footer + stale banner) is accurate to the actual reading.
+    raw_last_time = df['Time'].iloc[-1]
     df = df.set_index('Time').resample('D').last().dropna(subset=['Subscribers']).reset_index()
+    df.attrs['last_raw_time'] = raw_last_time
     return df
 
 
@@ -267,16 +271,25 @@ Coverage through 2024 was supplemented from a second scraper.</p>
 
 def create_plot():
     os.makedirs(PLOT_FOLDER, exist_ok=True)
-    last_updated = datetime.datetime.utcnow()
     creators_data = []
     for name in load_creators():
         df = load_creator_data(name)
         if df is None or df.empty:
             print(f"No data for {name}, skipping")
             continue
+        creators_data.append((name, df))
+
+    # last_updated must reflect the newest actual data point, not the moment we
+    # render. This script re-renders hourly even when every scrape fails, so
+    # keying off render time would keep the stale banner hidden during exactly
+    # the silent-failure case it exists to catch. TechDeals is excluded (it left
+    # Floatplane and is intentionally frozen), so it can't drag this backwards.
+    last_times = [df.attrs['last_raw_time'] for _, df in creators_data]
+    last_updated = max(last_times).to_pydatetime() if last_times else datetime.datetime.utcnow()
+
+    for name, df in creators_data:
         plot_creator(name, df)
         write_creator_page(name, df, last_updated)
-        creators_data.append((name, df))
         print(f"Plotted {name}")
 
     techdeals_df = load_creator_data('TechDeals')
