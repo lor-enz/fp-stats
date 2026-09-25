@@ -24,7 +24,7 @@ On the dev machine (vega) relatively up to date data is found in /home/lorenz/fp
 
 - Domain: `fp-stats.com` (target). `fp-stats.buzz` has expired — don't use it.
 - SWAG currently has `ONLY_SUBDOMAINS=true`. Serving fp-stats.com requires adding `EXTRA_DOMAINS=fp-stats.com, www.fp-stats.com` and pointing DNS at saturn.
-- Container timezone: `Europe/Berlin`.
+- Container timezone: `UTC` (matches the "store timestamps in UTC" rule; the code also derives all timestamps from UTC explicitly).
 
 **Saturn never has the source code — this is on purpose.** Only the dev machine (vega) holds the source. Saturn pulls the prebuilt image and runs it; it never builds. The image is built and pushed to Docker Hub (by CI, on push to `main`), and saturn's compose pulls that image.
 
