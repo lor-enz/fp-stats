@@ -1,3 +1,10 @@
-# START CRON JOB
-0 * * * * /usr/local/bin/python3 /app/main.py > /app/script.log 2>&1
-# END CRON JOB
+# fp-stats: scrape all active creators + re-render the site, hourly on the hour.
+# Installed at /etc/cron.d/fp-stats and run by `cron -f` (see dockerfile).
+#
+# cron runs jobs with a scrubbed environment, so the container's TZ=UTC is NOT
+# inherited here — set it explicitly. (The app also derives every timestamp from
+# UTC in code, so this is belt-and-suspenders, not load-bearing.)
+TZ=UTC
+
+# min hour dom mon dow  user  command
+0 * * * *  root  /usr/local/bin/python3 /app/main.py > /app/script.log 2>&1
