@@ -1,0 +1,9 @@
+services:
+  fp-watch:
+    build: .
+    volumes:
+      - ./data:/configdata
+      - ./output:/plots
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Berlin
