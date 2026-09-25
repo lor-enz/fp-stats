@@ -1,6 +1,6 @@
 # ltt-floatplane-watch
 
-This is the source code behind [www.fp-stats.buzz](https://fp-stats.buzz)
+This is the source code behind [www.,fp-stats](https://,fp-stats)
 
 This repository contains python code to fetch the current LTT floatplane subscriber number and save it to a file. (src/main.py)
 It then triggers a plotting function that uses all the data points in the files to create graphs. (src/plot.py)
@@ -9,18 +9,18 @@ The docker image is set up to recurringly run that script on a cronjob to regula
 
 ## Running the docker container
 
-    docker run -d --name fp-watch \
+    docker run -d --name fp-stats \
      -v /hostmachine/path/configdata:/configdata \
      -v /hostmachine/path/plots:/plots -e TZ=Europe/Berlin \
-     nicepenguin/fp-watch
+     nicepenguin/fp-stats
 
 Or use this for docker compose
 ```
 version: '3'
 services:
-  fp-watch:
-    image: nicepenguin/fp-watch
-    container_name: fp-watch
+  fp-stats:
+    image: nicepenguin/fp-stats
+    container_name: fp-stats
     environment:
       - TZ=Europe/Berlin
     volumes:
@@ -41,7 +41,7 @@ services:
 
 Navigate to the project directory and build the docker image with 
     
-    docker build -t nicepenguin/fp-watch .
+    docker build -t nicepenguin/fp-stats .
 
 ### Run python locally
 

@@ -1,5 +1,5 @@
 services:
-  fp-watch:
+  fp-stats:
     build: .
     volumes:
       - ./data:/configdata

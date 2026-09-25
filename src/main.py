@@ -70,7 +70,7 @@ if __name__ == "__main__":
         try:
             sub_count = fetch_sub_count(creator_id)
             path = f'{DATA_FOLDER}/data_{creator_filename(name)}.csv'
-            save_data_to_file(path, [name, current_time, sub_count, 'fp-watch'])
+            save_data_to_file(path, [name, current_time, sub_count, 'fp-stats'])
             print(f"{name}: {sub_count}")
         except Exception as e:
             print(f"Error fetching {name}: {e}")

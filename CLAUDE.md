@@ -20,7 +20,7 @@ Tracked creators are in `creators.csv`. the third column (`True`) means skip.
 
 **saturn**: netcup vRoot, Nürnberg, Ubuntu 24.04, 4 GB RAM, 128 GB disk. Runs Docker Compose and SWAG (nginx + Let's Encrypt). Replaced the old server `mars` in September 2026.
 
-- Domain: `fp-stats.com` (target). `fp-stats.buzz` has expired — don't use it.
+- Domain: `fp-stats.com` (target). `,fp-stats` has expired — don't use it.
 - SWAG currently has `ONLY_SUBDOMAINS=true`. Serving fp-stats.com requires adding `EXTRA_DOMAINS=fp-stats.com, www.fp-stats.com` and pointing DNS at saturn.
 - Container timezone: `Europe/Berlin`.
 
