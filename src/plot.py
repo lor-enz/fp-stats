@@ -7,15 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
 
-DEV_DATA_FOLDER = "~/projects/floatplane-watch/data"
-DOCKER_DATA_FOLDER = "/configdata"
-DEV_PLOT_FOLDER = "/tmp/fp-plots"
-DOCKER_PLOT_FOLDER = "/plots"
-
-is_dev = False
-
-DATA_FOLDER = DEV_DATA_FOLDER if is_dev else DOCKER_DATA_FOLDER
-PLOT_FOLDER = DEV_PLOT_FOLDER if is_dev else DOCKER_PLOT_FOLDER
+DATA_FOLDER = "/configdata"
+PLOT_FOLDER = "/plots"
 
 
 def creator_filename(name):
@@ -37,7 +30,8 @@ def load_creator_data(name):
     if not os.path.exists(path):
         return None
     df = pd.read_csv(path, header=None, names=['Creator', 'Time', 'Subscribers', 'Source'])
-    df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d_%H-%M-%S')
+    df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d_%H-%M-%S', errors='coerce')
+    df.dropna(subset=['Time'], inplace=True)
     df.sort_values('Time', inplace=True)
     return df
 

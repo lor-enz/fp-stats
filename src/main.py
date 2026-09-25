@@ -3,12 +3,7 @@ import csv
 import time
 import os
 
-DEV_DATA_FOLDER = "~/projects/floatplane-watch/data"
-DOCKER_DATA_FOLDER = "/configdata"
-
-is_dev = False
-
-DATA_FOLDER = DEV_DATA_FOLDER if is_dev else DOCKER_DATA_FOLDER
+DATA_FOLDER = "/configdata"
 
 headers = {
     "Host": "www.floatplane.com",
