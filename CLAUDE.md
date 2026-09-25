@@ -85,5 +85,7 @@ Lorenz already uses VisualPing to watch his sites. Maybe add some super simple J
 
 - Plan before larger changes; check the plan against the rules above.
 - Work in small steps. Commit after each working step.
+- **Commit atomically** — one logical change per commit.
+- **Use gitmoji for commit messages**, following the conventions in `gitmoji.md`.
 - Ask when something is genuinely ambiguous — especially anything involving data.
 - Update this file when a decision changes.
