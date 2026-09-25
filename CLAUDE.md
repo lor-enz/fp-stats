@@ -14,6 +14,8 @@ Tracked creators are in `creators.csv`. the third column (`True`) means skip.
 
 **TechDeals** left Floatplane in April 2026. Stop scraping it; keep its history on the site with a note.
 
+On the dev machine (vega) relatively up to date data is found in /home/lorenz/fp-stats/configdata
+
 ---
 
 ## Infrastructure
