@@ -34,6 +34,8 @@ def load_creators(path):
     creators = []
     with open(path, newline='') as f:
         for row in csv.reader(f):
+            if len(row) < 3:  # skip blank or malformed lines instead of crashing
+                continue
             name, creator_id, skip = row[0].strip(), row[1].strip(), row[2].strip()
             if skip == 'False':
                 creators.append((name, creator_id))
@@ -41,7 +43,9 @@ def load_creators(path):
 
 
 def fetch_sub_count(creator_id):
-    response = requests.get(API_URL.format(creator_id), headers=headers)
+    # Timeout so a hung connection can't stall the hourly run indefinitely
+    # (connect, read). The per-creator except in __main__ handles the failure.
+    response = requests.get(API_URL.format(creator_id), headers=headers, timeout=(5, 15))
     if response.status_code == 200:
         return response.json()['totalSubscriberCount']
     raise Exception(f"Status code: {response.status_code}")
