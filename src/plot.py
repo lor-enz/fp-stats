@@ -29,7 +29,7 @@ def load_creator_data(name):
     path = f'{DATA_FOLDER}/data_{creator_filename(name)}.csv'
     if not os.path.exists(path):
         return None
-    df = pd.read_csv(path, header=None, names=['Creator', 'Time', 'Subscribers', 'Source'])
+    df = pd.read_csv(path, header=None, names=['Creator', 'Time', 'Subscribers', 'Source'], on_bad_lines='skip')
     df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d_%H-%M-%S', errors='coerce')
     df.dropna(subset=['Time'], inplace=True)
     df.sort_values('Time', inplace=True)
