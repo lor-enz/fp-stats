@@ -1,7 +1,5 @@
 FROM python:3.10-slim
-ENV TZ=Europe/Berlin
-RUN apt-get update && apt-get install -y --no-install-recommends tzdata cron vim \
-    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
+RUN apt-get update && apt-get install -y --no-install-recommends cron vim \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY crontab /etc/cron.d/crontab

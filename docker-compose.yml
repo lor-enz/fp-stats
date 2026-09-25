@@ -6,4 +6,4 @@ services:
       - ./output:/plots
     restart: unless-stopped
     environment:
-      - TZ=Europe/Berlin
+      - TZ=UTC
