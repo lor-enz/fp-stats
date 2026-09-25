@@ -6,7 +6,14 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.ticker import MaxNLocator, AutoMinorLocator, FuncFormatter
 import pandas as pd
+
+# Match the page font: keep SVG text as real text (not paths) so the browser
+# renders it in the same sans-serif as the surrounding HTML.
+matplotlib.rcParams['svg.fonttype'] = 'none'
+matplotlib.rcParams['font.family'] = 'sans-serif'
+matplotlib.rcParams['font.sans-serif'] = ['Helvetica', 'Arial', 'DejaVu Sans', 'sans-serif']
 
 DATA_FOLDER = "/configdata"
 PLOT_FOLDER = "/plots"
@@ -83,11 +90,38 @@ def page_shell(title, body, last_updated):
 
 def plot_creator(name, df):
     fig, ax = plt.subplots(figsize=(12, 5))
-    ax.plot(df['Time'], df['Subscribers'], linewidth=1.5, color='#f64b00')
+    ax.plot(df['Time'], df['Subscribers'], linewidth=1.5, color='#f64b00', zorder=3)
     ax.set_title(name, fontsize=16)
     ax.set_ylabel('Floatplane Subscribers')
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+
+    # Y axis starts at zero.
+    ax.set_ylim(bottom=0)
+
+    # Major ticks label years / 5k; small minor ticks mark every month and 1k.
+    ax.xaxis.set_major_locator(mdates.YearLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    ax.xaxis.set_minor_locator(mdates.MonthLocator())
+    # Nice, round y ticks that adapt to each creator's range (LTT still lands on
+    # 5k steps; small creators get sensibly-scaled labels instead of only "0").
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=8, steps=[1, 2, 2.5, 5, 10]))
+    ax.yaxis.set_minor_locator(AutoMinorLocator())
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f'{int(v):,}'))
+    ax.tick_params(which='major', length=6)
+    ax.tick_params(which='minor', length=3)
+
+    # Instead of gridlines: light dots on a lattice of quarters (x) and 5k (y).
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    quarters = mdates.MonthLocator(bymonth=[1, 4, 7, 10])
+    q_ticks = quarters.tick_values(mdates.num2date(xmin), mdates.num2date(xmax))
+    xs = [t for t in q_ticks if xmin <= t <= xmax]
+    ys = [t for t in ax.get_yticks() if ymin <= t <= ymax]
+    ax.scatter([x for x in xs for _ in ys], [y for _ in xs for y in ys],
+               s=6, color='#ccc', edgecolors='none', zorder=0)
+
+    # Drop the box (top/right spines).
+    ax.spines[['top', 'right']].set_visible(False)
+
     fig.autofmt_xdate()
     plt.tight_layout()
     fig.savefig(f'{PLOT_FOLDER}/plot_{creator_filename(name)}.svg', format='svg')
