@@ -136,26 +136,30 @@ def write_creators_index(creators_data, techdeals_df, last_updated):
         f.write(page_shell('Creators — Floatplane Stats', body, last_updated))
 
 
-def write_index(creators_data):
-    rows = []
-    for name, df in creators_data:
-        current = int(df['Subscribers'].iloc[-1])
-        slug = creator_filename(name)
-        rows.append(f'<h2>{name} &mdash; {current:,}</h2><img src="plot_{slug}.svg" style="max-width:100%">')
-
-    html = f"""<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Floatplane Stats</title>
-<style>body{{font-family:sans-serif;max-width:1100px;margin:auto;padding:1rem}}</style>
-</head>
-<body>
-<h1>Floatplane Subscriber Stats</h1>
-{''.join(rows)}
-</body>
-</html>"""
-
+def write_front_page(ltt_df, last_updated):
+    stats = compute_stats(ltt_df)
+    change = stats['change_30d']
+    if change is not None:
+        sign = '+' if change >= 0 else ''
+        cls = 'up' if change >= 0 else 'down'
+        change_html = f'<div class="stat"><div class="value {cls}">{sign}{change:,}</div><div class="label">30-day change</div></div>'
+    else:
+        change_html = ''
+    body = f"""<h1>Floatplane Subscriber Stats</h1>
+<p>Long-term subscriber history for <a href="https://www.floatplane.com/channel/linustechtips/home">Linus Tech Tips</a>
+on Floatplane &mdash; the only place with data going back this far.</p>
+<div class="stats">
+  <div class="stat"><div class="value">{stats['current']:,}</div><div class="label">subscribers today</div></div>
+  <div class="stat"><div class="value">{stats['peak']:,}</div><div class="label">all-time peak</div></div>
+  {change_html}
+</div>
+<img src="/plot_LinusTechTips.svg" alt="LTT Floatplane subscriber chart">
+<p class="note">The August 2023 dip reflects the LTT controversy and channel hack.
+Data before 2023 is sparse, sourced from Reddit posts and web archives.
+Coverage through 2024 was supplemented from a second scraper.</p>
+<p><a href="/creators.html">See all tracked creators &rarr;</a></p>"""
     with open(f'{PLOT_FOLDER}/index.html', 'w') as f:
-        f.write(html)
+        f.write(page_shell('Floatplane Subscriber Stats', body, last_updated))
 
 
 def create_plot():
@@ -179,7 +183,9 @@ def create_plot():
                            note='TechDeals left Floatplane in April 2026. Historical data is preserved here but no longer being updated.')
 
     write_creators_index(creators_data, techdeals_df, last_updated)
-    write_index(creators_data)
+    ltt_df = next((df for name, df in creators_data if name == 'LinusTechTips'), None)
+    if ltt_df is not None:
+        write_front_page(ltt_df, last_updated)
     print(f"Site written to {PLOT_FOLDER}/")
 
 
