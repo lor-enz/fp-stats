@@ -118,6 +118,24 @@ def write_creator_page(name, df, last_updated, note=None):
         f.write(page_shell(f'{name} — Floatplane Stats', body, last_updated))
 
 
+def write_creators_index(creators_data, techdeals_df, last_updated):
+    rows = []
+    for name, df in creators_data:
+        slug = creator_filename(name)
+        current = int(df['Subscribers'].iloc[-1])
+        rows.append(f'<li><a href="/{slug}.html">{name}</a> &mdash; {current:,}</li>')
+    if techdeals_df is not None:
+        current = int(techdeals_df['Subscribers'].iloc[-1])
+        rows.append(f'<li><a href="/TechDeals.html">TechDeals</a> &mdash; {current:,} <span class="note">(left Floatplane April 2026)</span></li>')
+    body = f"""<nav><a href="/">Home</a></nav>
+<h1>Floatplane Creators</h1>
+<ul style="line-height:2.2">
+{''.join(rows)}
+</ul>"""
+    with open(f'{PLOT_FOLDER}/creators.html', 'w') as f:
+        f.write(page_shell('Creators — Floatplane Stats', body, last_updated))
+
+
 def write_index(creators_data):
     rows = []
     for name, df in creators_data:
@@ -153,6 +171,14 @@ def create_plot():
         write_creator_page(name, df, last_updated)
         creators_data.append((name, df))
         print(f"Plotted {name}")
+
+    techdeals_df = load_creator_data('TechDeals')
+    if techdeals_df is not None and not techdeals_df.empty:
+        plot_creator('TechDeals', techdeals_df)
+        write_creator_page('TechDeals', techdeals_df, last_updated,
+                           note='TechDeals left Floatplane in April 2026. Historical data is preserved here but no longer being updated.')
+
+    write_creators_index(creators_data, techdeals_df, last_updated)
     write_index(creators_data)
     print(f"Site written to {PLOT_FOLDER}/")
 
