@@ -18,6 +18,13 @@ matplotlib.rcParams['font.sans-serif'] = ['Helvetica', 'Arial', 'DejaVu Sans', '
 DATA_FOLDER = "/configdata"
 PLOT_FOLDER = "/plots"
 
+# Absolute base URL, needed for OpenGraph tags (they can't use relative paths).
+BASE_URL = "https://fp-stats.com"
+
+# og:image dimensions, kept in sync with the PNG we render in plot_creator
+# (figsize 12x5 inches at 100 dpi). Facebook/messengers use these as a hint.
+OG_IMAGE_W, OG_IMAGE_H = 1200, 500
+
 _CSS = """
 body{font-family:sans-serif;max-width:900px;margin:auto;padding:1rem 1.5rem;color:#222}
 a{color:#f64b00;text-decoration:none}a:hover{text-decoration:underline}
@@ -69,7 +76,51 @@ def compute_stats(df):
     return {'current': current, 'peak': peak, 'change_30d': change_30d}
 
 
-def page_shell(title, body, last_updated):
+def _esc(text):
+    """Minimal escaping for text placed inside HTML attribute values."""
+    return (text.replace('&', '&amp;').replace('<', '&lt;')
+                .replace('>', '&gt;').replace('"', '&quot;'))
+
+
+def og_tags(title, description, path, image):
+    """OpenGraph + Twitter card tags for link previews in messengers etc.
+
+    path is the page's absolute path (e.g. "/" or "/LinusTechTips.html");
+    image is an absolute path to a PNG, or None for a text-only preview.
+    """
+    url = BASE_URL + path
+    tags = [
+        ('meta', {'name': 'description', 'content': description}),
+        ('meta', {'property': 'og:type', 'content': 'website'}),
+        ('meta', {'property': 'og:site_name', 'content': 'fp-stats'}),
+        ('meta', {'property': 'og:title', 'content': title}),
+        ('meta', {'property': 'og:description', 'content': description}),
+        ('meta', {'property': 'og:url', 'content': url}),
+    ]
+    if image:
+        img_url = BASE_URL + image
+        tags += [
+            ('meta', {'property': 'og:image', 'content': img_url}),
+            ('meta', {'property': 'og:image:width', 'content': str(OG_IMAGE_W)}),
+            ('meta', {'property': 'og:image:height', 'content': str(OG_IMAGE_H)}),
+            ('meta', {'name': 'twitter:card', 'content': 'summary_large_image'}),
+            ('meta', {'name': 'twitter:image', 'content': img_url}),
+        ]
+    else:
+        tags.append(('meta', {'name': 'twitter:card', 'content': 'summary'}))
+    tags += [
+        ('meta', {'name': 'twitter:title', 'content': title}),
+        ('meta', {'name': 'twitter:description', 'content': description}),
+        ('link', {'rel': 'canonical', 'href': url}),
+    ]
+    lines = []
+    for tag, attrs in tags:
+        attr_str = ' '.join(f'{k}="{_esc(v)}"' for k, v in attrs.items())
+        lines.append(f'<{tag} {attr_str}>')
+    return '\n'.join(lines)
+
+
+def page_shell(title, body, last_updated, description, path, image=None):
     ts = last_updated.strftime('%Y-%m-%dT%H:%M:%SZ')
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -77,6 +128,7 @@ def page_shell(title, body, last_updated):
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title}</title>
+{og_tags(title, description, path, image)}
 <style>{_CSS}</style>
 </head>
 <body>
@@ -124,7 +176,11 @@ def plot_creator(name, df):
 
     fig.autofmt_xdate()
     plt.tight_layout()
-    fig.savefig(f'{PLOT_FOLDER}/plot_{creator_filename(name)}.svg', format='svg')
+    slug = creator_filename(name)
+    fig.savefig(f'{PLOT_FOLDER}/plot_{slug}.svg', format='svg')
+    # Also a raster copy for og:image link previews (messengers rarely render
+    # SVG). 12x5in at 100 dpi -> OG_IMAGE_W x OG_IMAGE_H, white background.
+    fig.savefig(f'{PLOT_FOLDER}/plot_{slug}.png', format='png', dpi=100, facecolor='white')
     plt.close(fig)
 
 
@@ -148,8 +204,12 @@ def write_creator_page(name, df, last_updated, note=None):
   {change_html}
 </div>
 <img src="/plot_{slug}.svg" alt="{name} Floatplane subscriber chart">"""
+    description = (f'{name} has {stats["current"]:,} Floatplane subscribers '
+                   f'(all-time peak {stats["peak"]:,}). Long-term subscriber history and chart.')
     with open(f'{PLOT_FOLDER}/{slug}.html', 'w') as f:
-        f.write(page_shell(f'{name} — Floatplane Stats', body, last_updated))
+        f.write(page_shell(f'{name} — Floatplane Stats', body, last_updated,
+                           description=description, path=f'/{slug}.html',
+                           image=f'/plot_{slug}.png'))
 
 
 def write_creators_index(creators_data, techdeals_df, last_updated):
@@ -167,7 +227,9 @@ def write_creators_index(creators_data, techdeals_df, last_updated):
 {''.join(rows)}
 </ul>"""
     with open(f'{PLOT_FOLDER}/creators.html', 'w') as f:
-        f.write(page_shell('Creators — Floatplane Stats', body, last_updated))
+        f.write(page_shell('Creators — Floatplane Stats', body, last_updated,
+                           description='Floatplane subscriber counts for all tracked creators.',
+                           path='/creators.html', image='/plot_LinusTechTips.png'))
 
 
 def write_front_page(ltt_df, last_updated):
@@ -192,8 +254,13 @@ on Floatplane &mdash; the only place with data going back this far.</p>
 Data before 2023 is sparse, sourced from Reddit posts and web archives.
 Coverage through 2024 was supplemented from a second scraper.</p>
 <p><a href="/creators.html">See all tracked creators &rarr;</a></p>"""
+    description = (f'Linus Tech Tips has {stats["current"]:,} Floatplane subscribers '
+                   f'(all-time peak {stats["peak"]:,}). The only long-term subscriber history, '
+                   f'with an annotated timeline of controversies and the channel hack.')
     with open(f'{PLOT_FOLDER}/index.html', 'w') as f:
-        f.write(page_shell('Floatplane Subscriber Stats', body, last_updated))
+        f.write(page_shell('Floatplane Subscriber Stats', body, last_updated,
+                           description=description, path='/',
+                           image='/plot_LinusTechTips.png'))
 
 
 def create_plot():
