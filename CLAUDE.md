@@ -26,6 +26,8 @@ On the dev machine (vega) relatively up to date data is found in /home/lorenz/fp
 - SWAG currently has `ONLY_SUBDOMAINS=true`. Serving fp-stats.com requires adding `EXTRA_DOMAINS=fp-stats.com, www.fp-stats.com` and pointing DNS at saturn.
 - Container timezone: `Europe/Berlin`.
 
+**Saturn never has the source code — this is on purpose.** Only the dev machine (vega) holds the source. Saturn pulls the prebuilt image and runs it; it never builds. The image is built and pushed to Docker Hub (by CI, on push to `main`), and saturn's compose pulls that image.
+
 ---
 
 ## Target architecture
@@ -87,5 +89,6 @@ Lorenz already uses VisualPing to watch his sites. Maybe add some super simple J
 - Work in small steps. Commit after each working step.
 - **Commit atomically** — one logical change per commit.
 - **Use gitmoji for commit messages**, following the conventions in `gitmoji.md`.
+- **Never add Claude or Claude Code as author or co-author.** No `Co-Authored-By` trailers; commits are authored by Lorenz alone.
 - Ask when something is genuinely ambiguous — especially anything involving data.
 - Update this file when a decision changes.
