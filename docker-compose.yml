@@ -1,9 +1,10 @@
 services:
   fp-stats:
-    build: .
+    image: nicepenguin/fp-stats:latest
+    container_name: fp-stats
     volumes:
-      - ./data:/configdata
-      - ./output:/plots
+      - /mnt/appdata/fp-stats/configdata:/configdata
+      - /mnt/appdata/fp-stats/output:/plots
     restart: unless-stopped
     environment:
       - TZ=UTC
