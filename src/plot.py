@@ -260,7 +260,8 @@ on Floatplane &mdash; the only place with data going back this far.</p>
   {change_html}
 </div>
 <img src="/plot_LinusTechTips.svg" alt="LTT Floatplane subscriber chart">
-<p class="note">The August 2023 dip reflects the LTT controversy and channel hack.
+<p class="note">The August 2023 dip reflects the LTT controversy.
+The earlier rise in March 2023 followed the channel hack, as viewers showed support.
 Data before 2023 is sparse, sourced from Reddit posts and web archives.
 Coverage through 2024 was supplemented from a second scraper.</p>
 <p><a href="/creators.html">See all tracked creators &rarr;</a></p>"""
