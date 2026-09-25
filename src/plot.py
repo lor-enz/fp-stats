@@ -33,6 +33,7 @@ def load_creator_data(name):
     df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d_%H-%M-%S', errors='coerce')
     df.dropna(subset=['Time'], inplace=True)
     df.sort_values('Time', inplace=True)
+    df = df.set_index('Time').resample('D').last().dropna(subset=['Subscribers']).reset_index()
     return df
 
 
