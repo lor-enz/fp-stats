@@ -1,6 +1,6 @@
 # ltt-floatplane-watch
 
-This is the source code behind [www.,fp-stats](https://,fp-stats)
+This is the source code behind [www.fp-stats.com](https://fp-stats.com)
 
 This repository contains python code to fetch the current LTT floatplane subscriber number and save it to a file. (src/main.py)
 It then triggers a plotting function that uses all the data points in the files to create graphs. (src/plot.py)
@@ -35,9 +35,26 @@ services:
 
 - **/plots** is the container path where the output plots are sent to. Choose a host path that enables publishing the html plot files in a streamlined way.
 
+## Continuous integration
+
+GitHub Actions (`.github/workflows/docker-publish.yml`) handle the build:
+
+- **On every push and pull request**, a smoke check runs `python -m py_compile src/*.py` to catch syntax errors before they can reach an image.
+- **On push to `main`**, once the smoke check passes, the image is built and pushed to Docker Hub as `nicepenguin/fp-stats:latest` and `nicepenguin/fp-stats:<commit-sha>`.
+
+The image is never built on the server. Saturn only pulls the prebuilt image.
+
 ## Development
 
-### Docker
+### Deploy flow
+
+1. Make changes and push them to `main`.
+2. Wait for the Docker Hub build action to complete.
+3. On saturn, pull the new image, restart the container, and trigger a run immediately:
+
+        docker compose pull fp-stats && docker compose up -d fp-stats && docker exec fp-stats python3 /app/main.py
+
+### Build the image locally
 
 Navigate to the project directory and build the docker image with 
     
