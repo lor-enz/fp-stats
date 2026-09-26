@@ -28,6 +28,10 @@ BLOG_URL = "https://www.lorenz.kiwi/fp-stats/"
 # (figsize 12x5 inches at 100 dpi). Facebook/messengers use these as a hint.
 OG_IMAGE_W, OG_IMAGE_H = 1200, 500
 
+# Readings further apart than this are joined by a dashed line instead of a
+# solid one: we don't know what happened in between.
+MAX_GAP = pd.Timedelta(days=7)
+
 _CSS = """
 body{font-family:sans-serif;max-width:900px;margin:auto;padding:1rem 1.5rem;color:#222}
 a{color:#f64b00;text-decoration:none}a:hover{text-decoration:underline}
@@ -153,9 +157,50 @@ def page_shell(title, body, last_updated, description, path, image=None, show_st
 </html>"""
 
 
+def plot_series(ax, df):
+    """Draw the subscriber line so gaps in the data are visible.
+
+    Returns a caption explaining the markings, or None if there's nothing to explain.
+
+    Readings at most MAX_GAP apart get a solid line. Longer gaps (early LTT data
+    gathered from Reddit/archives, scraper outages) get a thin dashed line, so
+    the chart doesn't pretend to know what happened in between. Readings next to
+    such a gap get a dot; estimated ("Guestimate") readings get a hollow dot.
+    """
+    color = '#f64b00'
+    t, s = df['Time'].reset_index(drop=True), df['Subscribers'].reset_index(drop=True)
+    gap = t.diff() > MAX_GAP  # True where the step *into* this point is a long gap
+
+    # Solid runs: split the series at every long gap.
+    run_id = gap.cumsum()
+    for _, idx in t.groupby(run_id).groups.items():
+        if len(idx) > 1:
+            ax.plot(t[idx], s[idx], linewidth=1.5, color=color, zorder=3)
+    # Dashed connectors across each long gap.
+    for i in gap[gap].index:
+        ax.plot(t[i - 1:i + 1], s[i - 1:i + 1], linewidth=1, color=color,
+                linestyle=(0, (3, 3)), alpha=0.6, zorder=2)
+
+    # Dots on readings bordering a long gap (sparse points stand out).
+    edge = gap | gap.shift(-1, fill_value=False)
+    guess = df['Source'].reset_index(drop=True).astype(str).str.contains('guestimate', case=False)
+    real = edge & ~guess
+    ax.scatter(t[real], s[real], s=14, color=color, edgecolors='none', zorder=4)
+    ax.scatter(t[guess], s[guess], s=14, facecolors='white', edgecolors=color,
+               linewidths=1, zorder=4)
+
+    if not gap.any():
+        return None
+    note = (f'Dashed lines bridge gaps of more than {MAX_GAP.days} days without readings; '
+            'dots mark the readings on either side.')
+    if guess.any():
+        note += ' Hollow dots are estimates.'
+    return note
+
+
 def plot_creator(name, df):
     fig, ax = plt.subplots(figsize=(12, 5))
-    ax.plot(df['Time'], df['Subscribers'], linewidth=1.5, color='#f64b00', zorder=3)
+    gap_note = plot_series(ax, df)
     ax.set_title(name, fontsize=16)
     ax.set_ylabel('Floatplane Subscribers')
 
@@ -195,9 +240,10 @@ def plot_creator(name, df):
     # SVG). 12x5in at 100 dpi -> OG_IMAGE_W x OG_IMAGE_H, white background.
     fig.savefig(f'{PLOT_FOLDER}/plot_{slug}.png', format='png', dpi=100, facecolor='white')
     plt.close(fig)
+    return gap_note
 
 
-def write_creator_page(name, df, last_updated, note=None, show_stale=True):
+def write_creator_page(name, df, last_updated, note=None, gap_note=None, show_stale=True):
     slug = creator_filename(name)
     stats = compute_stats(df)
     change = stats['change_30d']
@@ -216,7 +262,8 @@ def write_creator_page(name, df, last_updated, note=None, show_stale=True):
   <div class="stat"><div class="value">{stats['peak']:,}</div><div class="label">all-time peak</div></div>
   {change_html}
 </div>
-<img src="/plot_{slug}.svg" alt="{name} Floatplane subscriber chart">"""
+<img src="/plot_{slug}.svg" alt="{name} Floatplane subscriber chart">
+{f'<p class="note">{gap_note}</p>' if gap_note else ''}"""
     description = (f'{name} has {stats["current"]:,} Floatplane subscribers '
                    f'(all-time peak {stats["peak"]:,}). Long-term subscriber history and chart.')
     with open(f'{PLOT_FOLDER}/{slug}.html', 'w') as f:
@@ -245,7 +292,7 @@ def write_creators_index(creators_data, techdeals_df, last_updated):
                            path='/creators.html', image='/plot_LinusTechTips.png'))
 
 
-def write_front_page(ltt_df, last_updated):
+def write_front_page(ltt_df, last_updated, gap_note=None):
     stats = compute_stats(ltt_df)
     change = stats['change_30d']
     if change is not None:
@@ -263,7 +310,8 @@ on Floatplane &mdash; the only place with data going back this far.</p>
   {change_html}
 </div>
 <img src="/plot_LinusTechTips.svg" alt="LTT Floatplane subscriber chart">
-<p class="note">Data before 2023 is sparse, sourced from Reddit posts and web archives.</p>
+<p class="note">Before mid-August 2023 the data is sparse, sourced from Reddit posts and web archives.
+{gap_note or ''}</p>
 <p><a href="/creators.html">See all tracked creators &rarr;</a></p>
 <p><a href="{BLOG_URL}">How this data is collected &rarr;</a></p>"""
     description = (f'Linus Tech Tips has {stats["current"]:,} Floatplane subscribers '
@@ -293,19 +341,20 @@ def create_plot():
     def creator_last_updated(df):
         return df.attrs['last_raw_time'].to_pydatetime()
 
+    gap_notes = {}
     for name, df in creators_data:
-        plot_creator(name, df)
-        write_creator_page(name, df, creator_last_updated(df))
+        gap_notes[name] = plot_creator(name, df)
+        write_creator_page(name, df, creator_last_updated(df), gap_note=gap_notes[name])
         print(f"Plotted {name}")
 
     techdeals_df = load_creator_data('TechDeals')
     if techdeals_df is not None and not techdeals_df.empty:
-        plot_creator('TechDeals', techdeals_df)
+        techdeals_gap_note = plot_creator('TechDeals', techdeals_df)
         # Intentionally frozen (left Floatplane), so suppress the stale banner —
         # its footer honestly shows the April 2026 last reading.
         write_creator_page('TechDeals', techdeals_df, creator_last_updated(techdeals_df),
                            note='TechDeals left Floatplane in April 2026. Historical data is preserved here but no longer being updated.',
-                           show_stale=False)
+                           gap_note=techdeals_gap_note, show_stale=False)
 
     # The index isn't creator-specific: its banner signals overall pipeline health,
     # so it uses the newest reading across active creators (TechDeals excluded).
@@ -315,7 +364,7 @@ def create_plot():
 
     ltt_df = next((df for name, df in creators_data if name == 'LinusTechTips'), None)
     if ltt_df is not None:
-        write_front_page(ltt_df, creator_last_updated(ltt_df))
+        write_front_page(ltt_df, creator_last_updated(ltt_df), gap_notes['LinusTechTips'])
     print(f"Site written to {PLOT_FOLDER}/")
 
 
