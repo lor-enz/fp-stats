@@ -90,6 +90,7 @@ Lorenz uses VisualPing to watch his sites. Each page carries a few lines of JS t
 - Work in small steps. Commit after each working step.
 - **Commit atomically** — one logical change per commit.
 - **Preview chart changes before committing.** For any change to how the charts look, first render the SVGs into `/home/lorenz/fp-stats/output` (on vega, using the data in `/home/lorenz/fp-stats/configdata`) so Lorenz can check them. Commit only after that.
+- **Run the smoke test before committing code changes:** `.venv/bin/python tests/smoke.py`. It builds the whole site from made-up sample data in `tests/fixture`. CI runs the same test inside the built image and only pushes to Docker Hub if it passes.
 - **Use gitmoji for commit messages**, following the conventions in `gitmoji.md`.
 - **Never add Claude or Claude Code as author or co-author.** No `Co-Authored-By` trailers; commits are authored by Lorenz alone.
 - Ask when something is genuinely ambiguous — especially anything involving data.
