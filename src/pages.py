@@ -169,8 +169,7 @@ on Floatplane &mdash; the only place with data going back this far.</p>
 <p><a href="/creators.html">See all tracked creators &rarr;</a></p>
 <p><a href="{BLOG_URL}">How this data is collected &rarr;</a></p>"""
     description = (f'Linus Tech Tips has {stats["current"]:,} Floatplane subscribers '
-                   f'(all-time peak {stats["peak"]:,}). The only long-term subscriber history, '
-                   f'with an annotated timeline of controversies and the channel hack.')
+                   f'(all-time peak {stats["peak"]:,}). The only long-term subscriber history.')
     with atomic_write(f'{PLOT_FOLDER}/index.html') as tmp, open(tmp, 'w') as f:
         f.write(page_shell('Floatplane Subscriber Stats', body, last_updated,
                            description=description, path='/',
