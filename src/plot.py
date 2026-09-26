@@ -21,6 +21,9 @@ PLOT_FOLDER = "/plots"
 # Absolute base URL, needed for OpenGraph tags (they can't use relative paths).
 BASE_URL = "https://fp-stats.com"
 
+# Methodology and background live in a post on Lorenz's personal blog.
+BLOG_URL = "https://www.lorenz.kiwi/fp-stats/"
+
 # og:image dimensions, kept in sync with the PNG we render in plot_creator
 # (figsize 12x5 inches at 100 dpi). Facebook/messengers use these as a hint.
 OG_IMAGE_W, OG_IMAGE_H = 1200, 500
@@ -145,7 +148,7 @@ def page_shell(title, body, last_updated, description, path, image=None, show_st
 </head>
 <body>
 {stale}{body}
-<footer>Updated {last_updated.strftime('%Y-%m-%d %H:%M')} UTC &middot; <a href="/">Home</a> &middot; <a href="/creators.html">All creators</a></footer>
+<footer>Updated {last_updated.strftime('%Y-%m-%d %H:%M')} UTC &middot; <a href="/">Home</a> &middot; <a href="/creators.html">All creators</a> &middot; <a href="{BLOG_URL}">About &amp; methodology</a></footer>
 </body>
 </html>"""
 
@@ -264,7 +267,8 @@ on Floatplane &mdash; the only place with data going back this far.</p>
 The earlier rise in March 2023 followed the channel hack, as viewers showed support.
 Data before 2023 is sparse, sourced from Reddit posts and web archives.
 Coverage through 2024 was supplemented from a second scraper.</p>
-<p><a href="/creators.html">See all tracked creators &rarr;</a></p>"""
+<p><a href="/creators.html">See all tracked creators &rarr;</a></p>
+<p><a href="{BLOG_URL}">How this data is collected &rarr;</a></p>"""
     description = (f'Linus Tech Tips has {stats["current"]:,} Floatplane subscribers '
                    f'(all-time peak {stats["peak"]:,}). The only long-term subscriber history, '
                    f'with an annotated timeline of controversies and the channel hack.')
