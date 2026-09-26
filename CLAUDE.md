@@ -10,9 +10,9 @@ Owner: Lorenz. Written with Claude Code. Explain changes in plain terms; say cle
 
 ## Data
 
-Tracked creators are in `creators.csv`. the third column (`True`) means skip.
+Tracked creators are in `creators.csv`: name, Floatplane ID, skip flag. A `True` skip flag means don't scrape.
 
-**TechDeals** left Floatplane in April 2026. Stop scraping it; keep its history on the site with a note.
+When a creator leaves Floatplane, set the skip flag to stop scraping them; their history stays on the site.
 
 On the dev machine (vega) relatively up to date data is found in /home/lorenz/fp-stats/configdata
 
@@ -22,11 +22,12 @@ On the dev machine (vega) relatively up to date data is found in /home/lorenz/fp
 
 **saturn**: netcup vRoot, Nürnberg, Ubuntu 24.04, 4 GB RAM, 128 GB disk. Runs Docker Compose and SWAG (nginx + Let's Encrypt). Replaced the old server `mars` in September 2026.
 
-- Domain: `fp-stats.com` (target). `fp-stats.buzz` has expired — don't use it.
-- SWAG currently has `ONLY_SUBDOMAINS=true`. Serving fp-stats.com requires adding `EXTRA_DOMAINS=fp-stats.com, www.fp-stats.com` and pointing DNS at saturn.
-- Container timezone: `UTC` (matches the "store timestamps in UTC" rule; the code also derives all timestamps from UTC explicitly).
+- Domain: `fp-stats.com` (target). `fp-stats.buzz` was briefly used in 2023 with a cobbled together quick solution for a reddit post. `fp-stats.buzz` has expired — don't use it.
+- DNS points at saturn.
+- SWAG is serving fp-stats.com through `EXTRA_DOMAINS=fp-stats.com, www.fp-stats.com` .
+- Container timezone: `UTC`.
 
-**Saturn never has the source code — this is on purpose.** Only the dev machine (vega) holds the source. Saturn pulls the prebuilt image and runs it; it never builds. The image is built and pushed to Docker Hub (by CI, on push to `main`), and saturn's compose pulls that image.
+**saturn never has the source code — this is on purpose.** Lorenz wants to keep code handling simple. Only the dev machine (vega) holds the source. Saturn pulls the prebuilt image and runs it; it never builds. The image is built and pushed to Docker Hub (by CI, on push to `main`), and saturn's compose pulls that image.
 
 ---
 
@@ -41,7 +42,7 @@ One container that does everything on a schedule:
 
 If the container dies, the site keeps showing the last good version.
 
-It should be expected that Lorenz the Owners leaves this running for months on end without any maintenance or at least VERY sparse maintenance.
+Expect it to run for months on end with little or no maintenance.
 
 ### Site structure
 - **Front page**: LTT story. key numbers (current count, peak, 30-day change), short explanation.
@@ -77,7 +78,7 @@ Lorenz already uses VisualPing to watch his sites. Maybe add some super simple J
 
 **MVP:** fp-stats.com shows the LTT chart and updates by itself. Scraper → SVG chart → HTML page → single container → deployed on saturn alongside old containers.
 
-**Before public launch:** pages for all creators, methodology page, recent-view charts, og:image previews, **alerts when data stops arriving** (silent failure is the biggest real risk — TechDeals broke unnoticed for five months), explain the 2024 gap, retire old containers.
+**Before public launch:** pages for all creators, methodology page, recent-view charts, og:image previews, **alerts when data stops arriving** (silent failure is the biggest real risk).
 
 **Later:** CDN for traffic spike protection, easier annotation workflow (ideally phone-friendly), creator comparison views.
 
