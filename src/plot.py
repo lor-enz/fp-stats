@@ -32,6 +32,11 @@ OG_IMAGE_W, OG_IMAGE_H = 1200, 500
 # solid one: we don't know what happened in between.
 MAX_GAP = pd.Timedelta(days=7)
 
+# Charts show one point per 3 days (the last reading in each window). Shorter
+# than MAX_GAP, so regular data never looks like a gap. Stats and the stored
+# data keep their full resolution.
+CHART_FREQ = '3D'
+
 _CSS = """
 body{font-family:sans-serif;max-width:900px;margin:auto;padding:1rem 1.5rem;color:#222}
 a{color:#f64b00;text-decoration:none}a:hover{text-decoration:underline}
@@ -166,10 +171,21 @@ def plot_series(ax, df):
     gathered from Reddit/archives, scraper outages) get a thin dashed line, so
     the chart doesn't pretend to know what happened in between. Readings next to
     such a gap get a dot; estimated ("Guestimate") readings get a hollow dot.
+    Only one reading per CHART_FREQ window is drawn.
     """
     color = '#f64b00'
+    # Gaps are found on the full data, not the thinned points: two thinned
+    # points can be up to 2 * CHART_FREQ apart without any real gap between them.
+    # Keep each window's last reading, plus the first reading after every gap
+    # so the dashed line ends where real data resumes (e.g. the 2023 GN video
+    # drop stays solid instead of being folded into a dashed step).
+    df = df.reset_index(drop=True)
+    df = df.assign(run=(df['Time'].diff() > MAX_GAP).cumsum())
+    tails = df.groupby(pd.Grouper(key='Time', freq=CHART_FREQ)).tail(1).index
+    resumes = df.index[df['run'].diff() > 0]
+    df = df.loc[tails.union(resumes)]
     t, s = df['Time'].reset_index(drop=True), df['Subscribers'].reset_index(drop=True)
-    gap = t.diff() > MAX_GAP  # True where the step *into* this point is a long gap
+    gap = df['run'].reset_index(drop=True).diff() > 0  # True where the step *into* this point spans a gap
 
     # Solid runs: split the series at every long gap.
     run_id = gap.cumsum()
