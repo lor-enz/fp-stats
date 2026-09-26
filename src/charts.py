@@ -5,6 +5,7 @@ import matplotlib.dates as mdates
 from matplotlib.ticker import MaxNLocator, AutoMinorLocator, FuncFormatter
 import pandas as pd
 
+from atomic import atomic_write
 from data import creator_filename
 
 # Match the page font: keep SVG text as real text (not paths) so the browser
@@ -120,9 +121,11 @@ def plot_creator(name, df, out_dir):
     fig.autofmt_xdate()
     plt.tight_layout()
     slug = creator_filename(name)
-    fig.savefig(f'{out_dir}/plot_{slug}.svg', format='svg')
+    with atomic_write(f'{out_dir}/plot_{slug}.svg') as tmp:
+        fig.savefig(tmp, format='svg')
     # Also a raster copy for og:image link previews (messengers rarely render
     # SVG). 12x5in at 100 dpi -> OG_IMAGE_W x OG_IMAGE_H, white background.
-    fig.savefig(f'{out_dir}/plot_{slug}.png', format='png', dpi=100, facecolor='white')
+    with atomic_write(f'{out_dir}/plot_{slug}.png') as tmp:
+        fig.savefig(tmp, format='png', dpi=100, facecolor='white')
     plt.close(fig)
     return gap_note

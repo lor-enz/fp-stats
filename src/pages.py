@@ -4,6 +4,7 @@ import traceback
 
 from data import load_creators, load_creator_data, compute_stats, creator_filename
 from charts import plot_creator, OG_IMAGE_W, OG_IMAGE_H
+from atomic import atomic_write
 
 PLOT_FOLDER = "/plots"
 
@@ -119,7 +120,7 @@ def write_creator_page(name, df, last_updated, note=None, gap_note=None, show_st
 {f'<p class="note">{gap_note}</p>' if gap_note else ''}"""
     description = (f'{name} has {stats["current"]:,} Floatplane subscribers '
                    f'(all-time peak {stats["peak"]:,}). Long-term subscriber history and chart.')
-    with open(f'{PLOT_FOLDER}/{slug}.html', 'w') as f:
+    with atomic_write(f'{PLOT_FOLDER}/{slug}.html') as tmp, open(tmp, 'w') as f:
         f.write(page_shell(f'{name} — Floatplane Stats', body, last_updated,
                            description=description, path=f'/{slug}.html',
                            image=f'/plot_{slug}.png', show_stale=show_stale))
@@ -139,7 +140,7 @@ def write_creators_index(creators_data, techdeals_df, last_updated):
 <ul style="line-height:2.2">
 {''.join(rows)}
 </ul>"""
-    with open(f'{PLOT_FOLDER}/creators.html', 'w') as f:
+    with atomic_write(f'{PLOT_FOLDER}/creators.html') as tmp, open(tmp, 'w') as f:
         f.write(page_shell('Creators — Floatplane Stats', body, last_updated,
                            description='Floatplane subscriber counts for all tracked creators.',
                            path='/creators.html', image='/plot_LinusTechTips.png'))
@@ -170,7 +171,7 @@ on Floatplane &mdash; the only place with data going back this far.</p>
     description = (f'Linus Tech Tips has {stats["current"]:,} Floatplane subscribers '
                    f'(all-time peak {stats["peak"]:,}). The only long-term subscriber history, '
                    f'with an annotated timeline of controversies and the channel hack.')
-    with open(f'{PLOT_FOLDER}/index.html', 'w') as f:
+    with atomic_write(f'{PLOT_FOLDER}/index.html') as tmp, open(tmp, 'w') as f:
         f.write(page_shell('Floatplane Subscriber Stats', body, last_updated,
                            description=description, path='/',
                            image='/plot_LinusTechTips.png'))
