@@ -58,6 +58,19 @@ def run():
         if needed not in index:
             problems.append(f'index.html does not contain {needed!r}')
 
+    # TechDeals has the skip flag set: it must still get a page, marked as
+    # left, without the stale banner, and be listed on the creators page.
+    techdeals_path = os.path.join(out, 'TechDeals.html')
+    techdeals = open(techdeals_path).read() if os.path.exists(techdeals_path) else ''
+    if 'has left Floatplane' not in techdeals:
+        problems.append('TechDeals.html is not marked as left')
+    if 'id="stale"' in techdeals:
+        problems.append('TechDeals.html has a stale banner although the creator left')
+    creators_path = os.path.join(out, 'creators.html')
+    creators = open(creators_path).read() if os.path.exists(creators_path) else ''
+    if 'TechDeals</a>' not in creators or '(left Floatplane)' not in creators:
+        problems.append('creators.html does not list TechDeals as left')
+
     if problems:
         print('SMOKE TEST FAILED:\n  ' + '\n  '.join(problems))
         sys.exit(1)

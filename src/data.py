@@ -11,14 +11,19 @@ def creator_filename(name):
 
 
 def load_creators():
+    """Return (name, left) for every creator in creators.csv.
+
+    left is True when the skip flag is set: the creator left Floatplane, so
+    they're no longer scraped, but their page stays on the site.
+    """
     creators = []
     with open(f'{DATA_FOLDER}/creators.csv', newline='') as f:
         for row in csv.reader(f):
             if len(row) < 3:  # skip blank or malformed lines instead of crashing
                 continue
             name, skip = row[0].strip(), row[2].strip()
-            if skip == 'False':
-                creators.append(name)
+            if skip in ('False', 'True'):
+                creators.append((name, skip == 'True'))
     return creators
 
 

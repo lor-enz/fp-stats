@@ -77,7 +77,7 @@ def page_shell(title, body, last_updated, description, path, image=None, show_st
     ts = last_updated.strftime('%Y-%m-%dT%H:%M:%SZ')
     # The stale banner is per-page, keyed off this page's own last_updated, so a
     # single stalled creator can't be masked by others still updating. Suppressed
-    # for intentionally frozen pages (TechDeals) where "over 24h" is expected.
+    # for creators who left Floatplane: their pages are frozen on purpose.
     stale = ('<div id="stale">&#9888; Data hasn&#39;t updated in over 24&nbsp;hours.</div>\n'
              f'<script>if(Date.now()-new Date("{ts}")>864e5)'
              "document.getElementById('stale').style.display='block';</script>\n") if show_stale else ''
@@ -126,15 +126,14 @@ def write_creator_page(name, df, last_updated, note=None, gap_note=None, show_st
                            image=f'/plot_{slug}.png', show_stale=show_stale))
 
 
-def write_creators_index(creators_data, techdeals_df, last_updated):
+def write_creators_index(creators_data, last_updated):
     rows = []
-    for name, df in creators_data:
+    # Active creators first, then those who left, each in creators.csv order.
+    for name, df, left in sorted(creators_data, key=lambda c: c[2]):
         slug = creator_filename(name)
         current = int(df['Subscribers'].iloc[-1])
-        rows.append(f'<li><a href="/{slug}.html">{name}</a> &mdash; {current:,}</li>')
-    if techdeals_df is not None:
-        current = int(techdeals_df['Subscribers'].iloc[-1])
-        rows.append(f'<li><a href="/TechDeals.html">TechDeals</a> &mdash; {current:,} <span class="note">(left Floatplane April 2026)</span></li>')
+        left_html = ' <span class="note">(left Floatplane)</span>' if left else ''
+        rows.append(f'<li><a href="/{slug}.html">{name}</a> &mdash; {current:,}{left_html}</li>')
     body = f"""<nav><a href="/">Home</a></nav>
 <h1>Floatplane Creators</h1>
 <ul style="line-height:2.2">
@@ -194,14 +193,15 @@ def attempt(what, fn, *args, **kwargs):
 def build_site():
     os.makedirs(PLOT_FOLDER, exist_ok=True)
     creators_data = []
-    for name in load_creators():
+    for name, left in load_creators():
         ok, df = attempt(f"load {name}", load_creator_data, name)
         if not ok:
             continue
         if df is None:
-            print(f"No data for {name}, skipping")
+            if not left:  # left before we tracked them: nothing to show, nothing to report
+                print(f"No data for {name}, skipping")
             continue
-        creators_data.append((name, df))
+        creators_data.append((name, df, left))
 
     # Each page's last_updated must reflect the newest actual data point *for that
     # creator*, not render time and not a global max. This script re-renders hourly
@@ -217,30 +217,27 @@ def build_site():
         return gap_note
 
     gap_notes = {}  # only creators whose chart and page were rendered
-    for name, df in creators_data:
-        ok, gap_notes[name] = attempt(f"render {name}", render_creator, name, df)
+    for name, df, left in creators_data:
+        # Creators who left are frozen on purpose, so no stale banner; the
+        # footer still shows the date of their last reading.
+        page_args = dict(note=f'{name} has left Floatplane. Historical data is preserved here '
+                              'but no longer being updated.',
+                         show_stale=False) if left else {}
+        ok, gap_notes[name] = attempt(f"render {name}", render_creator, name, df, **page_args)
         if ok:
             print(f"Plotted {name}")
         else:
             del gap_notes[name]
 
-    _, techdeals_df = attempt("load TechDeals", load_creator_data, 'TechDeals')
-    if techdeals_df is not None:
-        # Intentionally frozen (left Floatplane), so suppress the stale banner —
-        # its footer honestly shows the April 2026 last reading.
-        attempt("render TechDeals", render_creator, 'TechDeals', techdeals_df,
-                note='TechDeals left Floatplane in April 2026. Historical data is preserved here but no longer being updated.',
-                show_stale=False)
-
     # The index isn't creator-specific: its banner signals overall pipeline health,
-    # so it uses the newest reading across active creators (TechDeals excluded).
-    active_last = [creator_last_updated(df) for _, df in creators_data]
+    # so it uses the newest reading across active creators (those who left excluded).
+    active_last = [creator_last_updated(df) for _, df, left in creators_data if not left]
     index_last_updated = max(active_last) if active_last else datetime.datetime.utcnow()
-    attempt("write creators index", write_creators_index, creators_data, techdeals_df, index_last_updated)
+    attempt("write creators index", write_creators_index, creators_data, index_last_updated)
 
     # Only update the front page if LTT's chart was rendered too, so it never
     # pairs fresh numbers with an old chart; otherwise it goes stale and alerts.
-    ltt_df = next((df for name, df in creators_data if name == 'LinusTechTips'), None)
+    ltt_df = next((df for name, df, _ in creators_data if name == 'LinusTechTips'), None)
     if ltt_df is not None and 'LinusTechTips' in gap_notes:
         attempt("write front page", write_front_page, ltt_df, creator_last_updated(ltt_df),
                 gap_notes['LinusTechTips'])
