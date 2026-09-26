@@ -3,7 +3,7 @@
 This is the source code behind [www.fp-stats.com](https://fp-stats.com)
 
 This repository contains python code to fetch the current LTT floatplane subscriber number and save it to a file. (src/main.py)
-It then triggers a plotting function that uses all the data points in the files to create graphs. (src/plot.py)
+It then triggers a plotting function that uses all the data points in the files to create graphs and HTML pages. (src/pages.py, with src/data.py and src/charts.py)
 
 The docker image is set up to recurringly run that script on a cronjob to regularly grab the current subscriber count and output the current plots as HTML files to the output path.
 
@@ -62,11 +62,11 @@ Navigate to the project directory and build the docker image with
 
 ### Run python locally
 
-Set the `is_dev` in both main.py and plot.py to `True`
+Set the `is_dev` in both main.py and pages.py to `True`
 
-Run just `plot.py` to just generate new plots or run `main.py` to both fetch new data and generate plots.
+Run just `pages.py` to just generate new plots or run `main.py` to both fetch new data and generate plots.
 
     python3 src/main.py
 or
 
-    python3 src/plot.py
+    python3 src/pages.py

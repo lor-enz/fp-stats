@@ -74,6 +74,6 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error fetching {name}: {e}")
 
-    from plot import create_plot
-    create_plot()
+    from pages import build_site
+    build_site()
     print(f"DONE at {get_current_time_formatted()}")
