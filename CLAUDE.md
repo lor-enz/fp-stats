@@ -1,6 +1,6 @@
 # fp-stats
 
-Tracks Floatplane subscriber counts and serves charts at **fp-stats.com**. Focus is on LTT — nobody else has this long-term history, and the annotated event timeline (controversies, the channel hack) is what makes it interesting.
+Tracks Floatplane subscriber counts and serves charts at **fp-stats.com**. Focus is on LTT — nobody else has this long-term history.
 
 **Launch strategy:** build it quietly and share publicly when the next LTT controversy happens. The site must be correct, up to date, and able to survive a Reddit spike on a day nobody can predict.
 
@@ -47,7 +47,7 @@ Expect it to run for months on end with little or no maintenance.
 ### Site structure
 - **Front page**: LTT story. key numbers (current count, peak, 30-day change), short explanation.
 - **Creators page**: links to a simple page per creator.
-- **Link to blog entry**: for methodology and other more off topic stuff. I run my personal site with a blog on www.lorenz.kiwi
+- **Link to blog entry**: methodology and other off-topic stuff live at https://www.lorenz.kiwi/fp-stats/ (linked in every page footer and on the front page).
 ---
 
 ## Rules
@@ -70,7 +70,7 @@ Manual. Lorenz copies data to Google Drive roughly every two months (phone remin
 
 ## Alerts
 
-Lorenz already uses VisualPing to watch his sites. Maybe add some super simple JS code so when the last update was over 1 day ago a big red banner (or any big visual change) shows up. VisualPing then picks up on this and takes care of alerting Lorenz.
+Lorenz uses VisualPing to watch his sites. Each page carries a few lines of JS that show a big red banner when that page's newest data point is over 24 hours old; VisualPing picks up the change and alerts Lorenz. The banner is suppressed for creators who left Floatplane.
 
 ---
 
@@ -78,9 +78,9 @@ Lorenz already uses VisualPing to watch his sites. Maybe add some super simple J
 
 **MVP:** fp-stats.com shows the LTT chart and updates by itself. Scraper → SVG chart → HTML page → single container → deployed on saturn alongside old containers.
 
-**Before public launch:** pages for all creators, methodology page, recent-view charts, og:image previews, **alerts when data stops arriving** (silent failure is the biggest real risk).
+**Before public launch:** pages for all creators ✅, methodology blog link ✅, og:image previews ✅, **alerts when data stops arriving** ✅ (stale banner for VisualPing; silent failure is the biggest real risk), recent-view charts.
 
-**Later:** CDN for traffic spike protection, easier annotation workflow (ideally phone-friendly), creator comparison views.
+**Later:** CDN for traffic spike protection, creator comparison views.
 
 ---
 
