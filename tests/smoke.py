@@ -28,6 +28,7 @@ EXPECTED = [
     'LinusTechTips.html', 'plot_LinusTechTips.svg', 'plot_LinusTechTips.png',
     'Example-Creator.html', 'plot_Example-Creator.svg', 'plot_Example-Creator.png',
     'TechDeals.html', 'plot_TechDeals.svg', 'plot_TechDeals.png',
+    'favicon.svg', 'favicon.ico',
 ]
 
 
@@ -54,7 +55,7 @@ def run():
         problems.append(f'temporary files left behind: {leftovers}')
     index_path = os.path.join(out, 'index.html')
     index = open(index_path).read() if os.path.exists(index_path) else ''
-    for needed in ('42,890', '/plot_LinusTechTips.svg', 'id="stale"', '</html>'):
+    for needed in ('42,890', '/plot_LinusTechTips.svg', 'id="stale"', '/favicon.svg', '</html>'):
         if needed not in index:
             problems.append(f'index.html does not contain {needed!r}')
 

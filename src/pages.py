@@ -5,6 +5,7 @@ import traceback
 from data import load_creators, load_creator_data, compute_stats, creator_filename
 from charts import plot_creator, OG_IMAGE_W, OG_IMAGE_H
 from atomic import atomic_write
+from favicon import write_favicons
 
 PLOT_FOLDER = "/plots"
 
@@ -87,6 +88,8 @@ def page_shell(title, body, last_updated, description, path, image=None, show_st
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title}</title>
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 {og_tags(title, description, path, image)}
 <style>{_CSS}</style>
 </head>
@@ -192,6 +195,7 @@ def attempt(what, fn, *args, **kwargs):
 
 def build_site():
     os.makedirs(PLOT_FOLDER, exist_ok=True)
+    attempt("write favicons", write_favicons, PLOT_FOLDER)
     creators_data = []
     for name, left in load_creators():
         ok, df = attempt(f"load {name}", load_creator_data, name)
