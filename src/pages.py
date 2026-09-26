@@ -1,5 +1,6 @@
 import datetime
 import os
+import traceback
 
 from data import load_creators, load_creator_data, compute_stats, creator_filename
 from charts import plot_creator, OG_IMAGE_W, OG_IMAGE_H
@@ -175,12 +176,29 @@ on Floatplane &mdash; the only place with data going back this far.</p>
                            image='/plot_LinusTechTips.png'))
 
 
+def attempt(what, fn, *args, **kwargs):
+    """Run one build step; on failure log it and return (False, None) instead of raising.
+
+    Each page is its own step, so one broken data file can't stop the rest of
+    the site from updating. A page whose step fails keeps its previous version,
+    which then ages past 24h and shows the stale banner.
+    """
+    try:
+        return True, fn(*args, **kwargs)
+    except Exception:
+        print(f"FAILED: {what} (keeping the previous version)")
+        traceback.print_exc()
+        return False, None
+
+
 def build_site():
     os.makedirs(PLOT_FOLDER, exist_ok=True)
     creators_data = []
     for name in load_creators():
-        df = load_creator_data(name)
-        if df is None or df.empty:
+        ok, df = attempt(f"load {name}", load_creator_data, name)
+        if not ok:
+            continue
+        if df is None:
             print(f"No data for {name}, skipping")
             continue
         creators_data.append((name, df))
@@ -193,30 +211,39 @@ def build_site():
     def creator_last_updated(df):
         return df.attrs['last_raw_time'].to_pydatetime()
 
-    gap_notes = {}
-    for name, df in creators_data:
-        gap_notes[name] = plot_creator(name, df, PLOT_FOLDER)
-        write_creator_page(name, df, creator_last_updated(df), gap_note=gap_notes[name])
-        print(f"Plotted {name}")
+    def render_creator(name, df, **page_args):
+        gap_note = plot_creator(name, df, PLOT_FOLDER)
+        write_creator_page(name, df, creator_last_updated(df), gap_note=gap_note, **page_args)
+        return gap_note
 
-    techdeals_df = load_creator_data('TechDeals')
-    if techdeals_df is not None and not techdeals_df.empty:
-        techdeals_gap_note = plot_creator('TechDeals', techdeals_df, PLOT_FOLDER)
+    gap_notes = {}  # only creators whose chart and page were rendered
+    for name, df in creators_data:
+        ok, gap_notes[name] = attempt(f"render {name}", render_creator, name, df)
+        if ok:
+            print(f"Plotted {name}")
+        else:
+            del gap_notes[name]
+
+    _, techdeals_df = attempt("load TechDeals", load_creator_data, 'TechDeals')
+    if techdeals_df is not None:
         # Intentionally frozen (left Floatplane), so suppress the stale banner —
         # its footer honestly shows the April 2026 last reading.
-        write_creator_page('TechDeals', techdeals_df, creator_last_updated(techdeals_df),
-                           note='TechDeals left Floatplane in April 2026. Historical data is preserved here but no longer being updated.',
-                           gap_note=techdeals_gap_note, show_stale=False)
+        attempt("render TechDeals", render_creator, 'TechDeals', techdeals_df,
+                note='TechDeals left Floatplane in April 2026. Historical data is preserved here but no longer being updated.',
+                show_stale=False)
 
     # The index isn't creator-specific: its banner signals overall pipeline health,
     # so it uses the newest reading across active creators (TechDeals excluded).
     active_last = [creator_last_updated(df) for _, df in creators_data]
     index_last_updated = max(active_last) if active_last else datetime.datetime.utcnow()
-    write_creators_index(creators_data, techdeals_df, index_last_updated)
+    attempt("write creators index", write_creators_index, creators_data, techdeals_df, index_last_updated)
 
+    # Only update the front page if LTT's chart was rendered too, so it never
+    # pairs fresh numbers with an old chart; otherwise it goes stale and alerts.
     ltt_df = next((df for name, df in creators_data if name == 'LinusTechTips'), None)
-    if ltt_df is not None:
-        write_front_page(ltt_df, creator_last_updated(ltt_df), gap_notes['LinusTechTips'])
+    if ltt_df is not None and 'LinusTechTips' in gap_notes:
+        attempt("write front page", write_front_page, ltt_df, creator_last_updated(ltt_df),
+                gap_notes['LinusTechTips'])
     print(f"Site written to {PLOT_FOLDER}/")
 
 

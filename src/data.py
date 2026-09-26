@@ -26,10 +26,15 @@ def load_creator_data(name):
     path = f'{DATA_FOLDER}/data_{creator_filename(name)}.csv'
     if not os.path.exists(path):
         return None
-    df = pd.read_csv(path, header=None, names=['Creator', 'Time', 'Subscribers', 'Source'], on_bad_lines='skip')
+    try:
+        df = pd.read_csv(path, header=None, names=['Creator', 'Time', 'Subscribers', 'Source'], on_bad_lines='skip')
+    except pd.errors.EmptyDataError:  # zero-byte file
+        return None
     df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d_%H-%M-%S', errors='coerce')
     df['Subscribers'] = pd.to_numeric(df['Subscribers'], errors='coerce')
     df.dropna(subset=['Time', 'Subscribers'], inplace=True)
+    if df.empty:  # no readable rows
+        return None
     df.sort_values('Time', inplace=True)
     # Keep the true last scrape time before resampling collapses it to midnight,
     # so last_updated (footer + stale banner) is accurate to the actual reading.
