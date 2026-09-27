@@ -152,3 +152,21 @@ def plot_creator(name, df, out_dir):
     plt.close(fig)
     return gap_note
 
+
+def sparkline_svg(df, width=120, height=28, days=365):
+    """Tiny inline SVG of the last `days` of readings (one point per week), for
+    the creators list. Scaled to its own min..max, so it shows the trend, not
+    the size. Plain SVG text: a few hundred bytes, no image file."""
+    recent = df[df['Time'] >= df['Time'].iloc[-1] - pd.Timedelta(days=days)]
+    s = recent.set_index('Time')['Subscribers'].resample('W').last().dropna()
+    if len(s) < 2:
+        return ''
+    lo, hi = s.min(), s.max()
+    pad = 3  # keep the stroke inside the box
+    xs = [pad + i * (width - 2 * pad) / (len(s) - 1) for i in range(len(s))]
+    ys = [height / 2] * len(s) if hi == lo else \
+         [pad + (hi - v) * (height - 2 * pad) / (hi - lo) for v in s]
+    pts = ' '.join(f'{x:.1f},{y:.1f}' for x, y in zip(xs, ys))
+    return (f'<svg class="spark" width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+            f'aria-hidden="true"><polyline points="{pts}" fill="none" stroke="{ORANGE}" '
+            'stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>')

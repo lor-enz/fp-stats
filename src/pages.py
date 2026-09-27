@@ -3,7 +3,7 @@ import os
 import traceback
 
 from data import load_creators, load_creator_data, compute_stats, creator_filename
-from charts import plot_creator, OG_IMAGE_W, OG_IMAGE_H
+from charts import plot_creator, sparkline_svg, OG_IMAGE_W, OG_IMAGE_H
 from atomic import atomic_write
 from favicon import write_favicons
 
@@ -29,6 +29,12 @@ h1{line-height:1.2}
 .up{color:#2a2}.down{color:#c00}
 img{max-width:100%;height:auto}
 .note{font-size:.85rem;color:#666;margin-top:.5rem}
+table.creators{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.creators td,.creators th{padding:.55rem .5rem;border-bottom:1px solid #eee;text-align:right;white-space:nowrap}
+.creators td:first-child,.creators th:first-child{text-align:left;white-space:normal}
+.creators th{font-size:.8rem;font-weight:normal;color:#666}
+.creators .spark{display:block;margin-left:auto}
+@media (max-width:480px){.creators .sparkcol{display:none}}
 footer{margin-top:3rem;padding-top:1rem;border-top:1px solid #eee;font-size:.85rem;color:#888}
 #stale{display:none;background:#c00;color:#fff;padding:1rem;text-align:center;font-size:1.1rem;margin-bottom:1.5rem}
 """
@@ -137,13 +143,23 @@ def write_creators_index(creators_data, last_updated):
     # Active creators first, then those who left, each in creators.csv order.
     for name, df, left in sorted(creators_data, key=lambda c: c[2]):
         slug = creator_filename(name)
-        current = int(df['Subscribers'].iloc[-1])
-        left_html = ' <span class="note">(left Floatplane)</span>' if left else ''
-        rows.append(f'<li><a href="/{slug}.html">{name}</a> &mdash; {current:,}{left_html}</li>')
+        stats = compute_stats(df)
+        change = stats['change_30d']
+        if left:
+            change_html = '<span class="note">left Floatplane</span>'
+        elif change is None:
+            change_html = ''
+        else:
+            cls = 'up' if change >= 0 else 'down'
+            change_html = f'<span class="{cls}">{"+" if change >= 0 else ""}{change:,}</span>'
+        rows.append(f'<tr><td><a href="/{slug}.html">{name}</a></td>'
+                    f'<td class="sparkcol">{sparkline_svg(df)}</td>'
+                    f'<td>{stats["current"]:,}</td><td>{change_html}</td></tr>')
     body = f"""<h1>Floatplane Creators</h1>
-<ul style="line-height:2.2">
-{''.join(rows)}
-</ul>"""
+<table class="creators">
+<tr><th>Creator</th><th class="sparkcol">last 12 months</th><th>subscribers</th><th>30-day change</th></tr>
+{chr(10).join(rows)}
+</table>"""
     with atomic_write(f'{PLOT_FOLDER}/creators.html') as tmp, open(tmp, 'w') as f:
         f.write(page_shell('Creators — Floatplane Stats', body, last_updated,
                            description='Floatplane subscriber counts for all tracked creators.',

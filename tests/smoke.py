@@ -69,7 +69,7 @@ def run():
         problems.append('TechDeals.html has a stale banner although the creator left')
     creators_path = os.path.join(out, 'creators.html')
     creators = open(creators_path).read() if os.path.exists(creators_path) else ''
-    if 'TechDeals</a>' not in creators or '(left Floatplane)' not in creators:
+    if 'TechDeals</a>' not in creators or 'left Floatplane' not in creators:
         problems.append('creators.html does not list TechDeals as left')
 
     if problems:
