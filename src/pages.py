@@ -15,12 +15,16 @@ BASE_URL = "https://fp-stats.com"
 # Methodology and background live in a post on Lorenz's personal blog.
 BLOG_URL = "https://www.lorenz.kiwi/fp-stats/"
 
+# System fonts: nothing to download (fast under load, no third-party font host).
 _CSS = """
-body{font-family:sans-serif;max-width:900px;margin:auto;padding:1rem 1.5rem;color:#222}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;max-width:900px;margin:auto;padding:0 1.5rem 1rem;color:#222;line-height:1.5}
 a{color:#f64b00;text-decoration:none}a:hover{text-decoration:underline}
-nav{margin-bottom:2rem}nav a{margin-right:1rem}
+header{display:flex;align-items:center;padding:.9rem 0;margin-bottom:1.5rem;border-bottom:1px solid #eee}
+header .brand{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:1.25rem;color:#222}
+header .brand:hover{text-decoration:none}
+h1{line-height:1.2}
 .stats{margin:1.5rem 0;display:flex;gap:3rem;flex-wrap:wrap}
-.stat .value{font-size:2rem;font-weight:bold}
+.stat .value{font-size:2rem;font-weight:bold;font-variant-numeric:tabular-nums}
 .stat .label{font-size:.8rem;color:#666;margin-top:.2rem}
 .up{color:#2a2}.down{color:#c00}
 img{max-width:100%;height:auto}
@@ -94,6 +98,7 @@ def page_shell(title, body, last_updated, description, path, image=None, show_st
 <style>{_CSS}</style>
 </head>
 <body>
+<header><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28">fp-stats</a></header>
 {stale}{body}
 <footer>Updated {last_updated.strftime('%Y-%m-%d %H:%M')} UTC &middot; <a href="/">Home</a> &middot; <a href="/creators.html">All creators</a> &middot; <a href="{BLOG_URL}">About &amp; methodology</a></footer>
 </body>
@@ -111,8 +116,7 @@ def write_creator_page(name, df, last_updated, note=None, gap_note=None, show_st
     else:
         change_html = ''
     note_html = f'<p class="note">{note}</p>' if note else ''
-    body = f"""<nav><a href="/">Home</a> &middot; <a href="/creators.html">All creators</a></nav>
-<h1>{name}</h1>
+    body = f"""<h1>{name}</h1>
 {note_html}
 <div class="stats">
   <div class="stat"><div class="value">{stats['current']:,}</div><div class="label">subscribers</div></div>
@@ -136,8 +140,7 @@ def write_creators_index(creators_data, last_updated):
         current = int(df['Subscribers'].iloc[-1])
         left_html = ' <span class="note">(left Floatplane)</span>' if left else ''
         rows.append(f'<li><a href="/{slug}.html">{name}</a> &mdash; {current:,}{left_html}</li>')
-    body = f"""<nav><a href="/">Home</a></nav>
-<h1>Floatplane Creators</h1>
+    body = f"""<h1>Floatplane Creators</h1>
 <ul style="line-height:2.2">
 {''.join(rows)}
 </ul>"""
