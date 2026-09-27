@@ -116,13 +116,12 @@ def write_creator_page(name, df, last_updated, note=None, gap_note=None, show_st
 {note_html}
 <div class="stats">
   <div class="stat"><div class="value">{stats['current']:,}</div><div class="label">subscribers</div></div>
-  <div class="stat"><div class="value">{stats['peak']:,}</div><div class="label">all-time peak</div></div>
   {change_html}
 </div>
 <img src="/plot_{slug}.svg" alt="{name} Floatplane subscriber chart">
 {f'<p class="note">{gap_note}</p>' if gap_note else ''}"""
-    description = (f'{name} has {stats["current"]:,} Floatplane subscribers '
-                   f'(all-time peak {stats["peak"]:,}). Long-term subscriber history and chart.')
+    description = (f'{name} has {stats["current"]:,} Floatplane subscribers. '
+                   'Long-term subscriber history and chart.')
     with atomic_write(f'{PLOT_FOLDER}/{slug}.html') as tmp, open(tmp, 'w') as f:
         f.write(page_shell(f'{name} — Floatplane Stats', body, last_updated,
                            description=description, path=f'/{slug}.html',
@@ -162,7 +161,6 @@ def write_front_page(ltt_df, last_updated, gap_note=None):
 on Floatplane &mdash; the only place with data going back this far.</p>
 <div class="stats">
   <div class="stat"><div class="value">{stats['current']:,}</div><div class="label">subscribers</div></div>
-  <div class="stat"><div class="value">{stats['peak']:,}</div><div class="label">all-time peak</div></div>
   {change_html}
 </div>
 <img src="/plot_LinusTechTips.svg" alt="LTT Floatplane subscriber chart">
@@ -170,8 +168,8 @@ on Floatplane &mdash; the only place with data going back this far.</p>
 {gap_note or ''}</p>
 <p><a href="/creators.html">See all tracked creators &rarr;</a></p>
 <p><a href="{BLOG_URL}">How this data is collected &rarr;</a></p>"""
-    description = (f'Linus Tech Tips has {stats["current"]:,} Floatplane subscribers '
-                   f'(all-time peak {stats["peak"]:,}). The only long-term subscriber history.')
+    description = (f'Linus Tech Tips has {stats["current"]:,} Floatplane subscribers. '
+                   'The only long-term subscriber history.')
     with atomic_write(f'{PLOT_FOLDER}/index.html') as tmp, open(tmp, 'w') as f:
         f.write(page_shell('Floatplane Subscriber Stats', body, last_updated,
                            description=description, path='/',

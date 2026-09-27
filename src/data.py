@@ -51,8 +51,7 @@ def load_creator_data(name):
 
 def compute_stats(df):
     current = int(df['Subscribers'].iloc[-1])
-    peak = int(df['Subscribers'].max())
     cutoff = df['Time'].iloc[-1] - pd.Timedelta(days=30)
     past = df[df['Time'] <= cutoff]
     change_30d = (current - int(past['Subscribers'].iloc[-1])) if not past.empty else None
-    return {'current': current, 'peak': peak, 'change_30d': change_30d}
+    return {'current': current, 'change_30d': change_30d}
