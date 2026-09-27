@@ -16,8 +16,9 @@ matplotlib.rcParams['font.sans-serif'] = ['Helvetica', 'Arial', 'DejaVu Sans', '
 matplotlib.rcParams['font.size'] = 13
 
 ORANGE = '#f64b00'
-GRID_GREY = '#e8e8e8'      # horizontal gridlines
-BASELINE_GREY = '#999'     # the zero line
+DOT_GREY = '#c8c8c8'       # background dot grid
+BASELINE_GREY = '#999'     # the zero line, year ticks
+TICK_GREY = '#bbb'         # quarter ticks
 LABEL_GREY = '#666'        # axis numbers, subtitle
 
 # og:image dimensions, kept in sync with the PNG we render in plot_creator
@@ -120,26 +121,37 @@ def plot_creator(name, df, out_dir):
     xmin, xmax = ax.get_xlim()
     ax.set_xlim(xmin - (xmax - xmin) * 0.07, xmax + (xmax - xmin) * 0.05)
 
-    # Years along the bottom, no tick marks. Nice, round y steps that adapt to
-    # each creator's range (LTT lands on 10k steps, small creators get
-    # sensibly-scaled ones).
+    # Years along the bottom, with a tick on the zero line at each year and a
+    # smaller one at each quarter, so every dot column leads down to a year.
+    # Nice, round y steps that adapt to each creator's range (LTT lands on
+    # 10k steps, small creators get sensibly-scaled ones).
     ax.xaxis.set_major_locator(mdates.YearLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    ax.xaxis.set_minor_locator(mdates.MonthLocator(bymonth=[4, 7, 10]))
     ax.yaxis.set_major_locator(MaxNLocator(nbins=8, steps=[1, 2, 2.5, 5, 10]))
     ax.tick_params(length=0, labelcolor=LABEL_GREY)
+    ax.tick_params(axis='x', which='major', length=7, width=1.2, color=BASELINE_GREY)
+    ax.tick_params(axis='x', which='minor', length=3.5, width=1, color=TICK_GREY)
 
-    # No axis lines: light horizontal gridlines, a darker zero baseline, and
-    # the y values written on top of their gridline at the left edge.
+    # No axis lines: a darker zero baseline, and the y values written just
+    # above their row at the left edge.
     ax.spines[['left', 'bottom', 'top', 'right']].set_visible(False)
-    ax.yaxis.grid(True, color=GRID_GREY, linewidth=1)
-    ax.set_axisbelow(True)
     ax.axhline(0, color=BASELINE_GREY, linewidth=1.2, zorder=2)
     ax.tick_params(axis='y', labelleft=False)
     ymax = ax.get_ylim()[1]
-    for y in ax.get_yticks():
-        if 0 < y <= ymax:
-            ax.annotate(f'{int(y):,}', (0, y), xycoords=('axes fraction', 'data'), xytext=(0, 3),
-                        textcoords='offset points', ha='left', va='bottom', fontsize=12, color=LABEL_GREY)
+    rows = [y for y in ax.get_yticks() if 0 < y <= ymax]
+    for y in rows:
+        ax.annotate(f'{int(y):,}', (0, y), xycoords=('axes fraction', 'data'), xytext=(0, 3),
+                    textcoords='offset points', ha='left', va='bottom', fontsize=12, color=LABEL_GREY)
+
+    # Instead of gridlines: light dots at every quarter on each value row,
+    # starting right of the value strip so they never touch the numbers.
+    xmin, xmax = ax.get_xlim()
+    x0 = xmin + (xmax - xmin) * 0.065
+    quarters = mdates.MonthLocator(bymonth=[1, 4, 7, 10])
+    cols = [x for x in quarters.tick_values(mdates.num2date(x0), mdates.num2date(xmax)) if x0 <= x <= xmax]
+    ax.scatter([x for x in cols for _ in rows], [y for _ in cols for y in rows],
+               s=9, color=DOT_GREY, edgecolors='none', zorder=0)
 
     plt.tight_layout()
     slug = creator_filename(name)
