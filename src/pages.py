@@ -140,8 +140,13 @@ def write_creator_page(name, df, last_updated, note=None, gap_note=None, show_st
 
 def write_creators_index(creators_data, last_updated):
     rows = []
-    # Active creators first, then those who left, each in creators.csv order.
-    for name, df, left in sorted(creators_data, key=lambda c: c[2]):
+    # Active creators first, then those who left. Within each group: most
+    # subscribers first, ties alphabetically.
+    def order(c):
+        name, df, left = c
+        return (left, -int(df['Subscribers'].iloc[-1]), name.casefold())
+
+    for name, df, left in sorted(creators_data, key=order):
         slug = creator_filename(name)
         stats = compute_stats(df)
         change = stats['change_30d']
