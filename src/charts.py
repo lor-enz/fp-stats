@@ -98,8 +98,8 @@ def plot_creator(name, df, out_dir):
     gap_note = plot_series(ax, df)
     # The name and site stay in the image, since charts get shared on their own.
     # Title with a subtitle under it (instead of a sideways y-axis label).
-    ax.set_title(name, fontsize=20, fontweight='bold', loc='left', color='#222', pad=34)
-    ax.text(0, 1.03, 'Floatplane subscribers', transform=ax.transAxes,
+    title = ax.set_title(name, fontsize=20, fontweight='bold', loc='left', color='#222', pad=34)
+    subtitle = ax.text(0, 1.03, 'Floatplane subscribers', transform=ax.transAxes,
             ha='left', va='bottom', fontsize=12, color=LABEL_GREY)
     fig.text(0.995, 0.01, 'fp-stats.com', ha='right', va='bottom', fontsize=11, color='#aaa')
 
@@ -116,10 +116,11 @@ def plot_creator(name, df, out_dir):
 
     # Y axis starts at zero.
     ax.set_ylim(bottom=0)
-    # Room on the right for the latest-value label, and a strip on the left
-    # for the y values, so they never sit on top of the line.
+    # Room on the right for the latest-value label. On the left the plot
+    # starts just before the first reading; the y values sit outside it.
     xmin, xmax = ax.get_xlim()
-    ax.set_xlim(xmin - (xmax - xmin) * 0.07, xmax + (xmax - xmin) * 0.05)
+    first = mdates.date2num(df['Time'].iloc[0])
+    ax.set_xlim(first - (xmax - xmin) * 0.01, xmax + (xmax - xmin) * 0.05)
 
     # Years along the bottom, with a tick on the zero line at each year and a
     # smaller one at each quarter, so every dot column leads down to a year.
@@ -133,27 +134,35 @@ def plot_creator(name, df, out_dir):
     ax.tick_params(axis='x', which='major', length=7, width=1.2, color=BASELINE_GREY)
     ax.tick_params(axis='x', which='minor', length=3.5, width=1, color=TICK_GREY)
 
-    # No axis lines: a darker zero baseline, and the y values written just
-    # above their row at the left edge.
+    # No axis lines: a darker zero baseline, and the y values written at the
+    # left edge, level with their row of dots.
     ax.spines[['left', 'bottom', 'top', 'right']].set_visible(False)
     ax.axhline(0, color=BASELINE_GREY, linewidth=1.2, zorder=2)
     ax.tick_params(axis='y', labelleft=False)
     ymax = ax.get_ylim()[1]
     rows = [y for y in ax.get_yticks() if 0 < y <= ymax]
-    for y in rows:
-        ax.annotate(f'{int(y):,}', (0, y), xycoords=('axes fraction', 'data'), xytext=(0, 3),
-                    textcoords='offset points', ha='left', va='bottom', fontsize=12, color=LABEL_GREY)
 
     # Instead of gridlines: light dots at every quarter on each value row,
-    # starting right of the value strip so they never touch the numbers.
-    xmin, xmax = ax.get_xlim()
-    x0 = xmin + (xmax - xmin) * 0.065
+    # right of the numbers.
+    x0, xmax = ax.get_xlim()
     quarters = mdates.MonthLocator(bymonth=[1, 4, 7, 10])
     cols = [x for x in quarters.tick_values(mdates.num2date(x0), mdates.num2date(xmax)) if x0 <= x <= xmax]
     ax.scatter([x for x in cols for _ in rows], [y for _ in cols for y in rows],
                s=9, color=DOT_GREY, edgecolors='none', zorder=0)
+    # Each value centred on its row, right-aligned just left of the plot.
+    labels = [
+        ax.annotate(f'{int(y):,}', (x0, y), xytext=(-4, 0), textcoords='offset points',
+                    ha='right', va='center', fontsize=12, color=LABEL_GREY, annotation_clip=False)
+        for y in rows]
 
     plt.tight_layout()
+    # The values hang left of the plot; start the title where they start.
+    if labels:
+        renderer = fig.canvas.get_renderer()
+        left = min(l.get_window_extent(renderer).x0 for l in labels)
+        left = ax.transAxes.inverted().transform((left, 0))[0]
+        title.set_x(left)
+        subtitle.set_x(left)
     slug = creator_filename(name)
     with atomic_write(f'{out_dir}/plot_{slug}.svg') as tmp:
         fig.savefig(tmp, format='svg')
