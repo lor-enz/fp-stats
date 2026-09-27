@@ -2,7 +2,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from matplotlib.ticker import MaxNLocator, AutoMinorLocator, FuncFormatter
+from matplotlib.ticker import MaxNLocator
 import pandas as pd
 
 from atomic import atomic_write
@@ -13,6 +13,12 @@ from data import creator_filename
 matplotlib.rcParams['svg.fonttype'] = 'none'
 matplotlib.rcParams['font.family'] = 'sans-serif'
 matplotlib.rcParams['font.sans-serif'] = ['Helvetica', 'Arial', 'DejaVu Sans', 'sans-serif']
+matplotlib.rcParams['font.size'] = 13
+
+ORANGE = '#f64b00'
+GRID_GREY = '#e8e8e8'      # horizontal gridlines
+BASELINE_GREY = '#999'     # the zero line
+LABEL_GREY = '#666'        # axis numbers, subtitle
 
 # og:image dimensions, kept in sync with the PNG we render in plot_creator
 # (figsize 12x5 inches at 100 dpi). Facebook/messengers use these as a hint.
@@ -39,7 +45,7 @@ def plot_series(ax, df):
     such a gap get a dot; estimated ("Guestimate") readings get a hollow dot.
     Only one reading per CHART_FREQ window is drawn.
     """
-    color = '#f64b00'
+    color = ORANGE
     # Gaps are found on the full data, not the thinned points: two thinned
     # points can be up to 2 * CHART_FREQ apart without any real gap between them.
     # Keep each window's last reading, plus the first reading after every gap
@@ -53,6 +59,8 @@ def plot_series(ax, df):
     t, s = df['Time'].reset_index(drop=True), df['Subscribers'].reset_index(drop=True)
     gap = df['run'].reset_index(drop=True).diff() > 0  # True where the step *into* this point spans a gap
 
+    # Faint fill under the whole line, gaps included.
+    ax.fill_between(t, s, color=color, alpha=0.08, linewidth=0, zorder=1)
     # Solid runs: split the series at every long gap.
     run_id = gap.cumsum()
     for _, idx in t.groupby(run_id).groups.items():
@@ -87,38 +95,52 @@ def plot_creator(name, df, out_dir):
     """
     fig, ax = plt.subplots(figsize=(12, 5))
     gap_note = plot_series(ax, df)
-    ax.set_title(name, fontsize=16)
-    ax.set_ylabel('Floatplane Subscribers')
+    # The name and site stay in the image, since charts get shared on their own.
+    # Title with a subtitle under it (instead of a sideways y-axis label).
+    ax.set_title(name, fontsize=20, fontweight='bold', loc='left', color='#222', pad=34)
+    ax.text(0, 1.03, 'Floatplane subscribers', transform=ax.transAxes,
+            ha='left', va='bottom', fontsize=12, color=LABEL_GREY)
+    fig.text(0.995, 0.01, 'fp-stats.com', ha='right', va='bottom', fontsize=11, color='#aaa')
+
+    # Dot on the latest reading, labelled with its value. Hollow if that
+    # reading is an estimate, matching the estimate markers in plot_series.
+    last_t, last_s = df['Time'].iloc[-1], df['Subscribers'].iloc[-1]
+    if 'guestimate' in str(df['Source'].iloc[-1]).lower():
+        ax.scatter([last_t], [last_s], s=50, facecolors='white', edgecolors=ORANGE, linewidths=2, zorder=5)
+    else:
+        ax.scatter([last_t], [last_s], s=50, color=ORANGE, edgecolors='white', linewidths=1.5, zorder=5)
+    # The label goes right of the dot, where the line never is.
+    ax.annotate(f'{int(last_s):,}', (last_t, last_s), xytext=(9, 0), textcoords='offset points',
+                ha='left', va='center', fontsize=13, fontweight='bold', color=ORANGE, zorder=5)
 
     # Y axis starts at zero.
     ax.set_ylim(bottom=0)
+    # Room on the right for the latest-value label, and a strip on the left
+    # for the y values, so they never sit on top of the line.
+    xmin, xmax = ax.get_xlim()
+    ax.set_xlim(xmin - (xmax - xmin) * 0.07, xmax + (xmax - xmin) * 0.05)
 
-    # Major ticks label years / 5k; small minor ticks mark every month and 1k.
+    # Years along the bottom, no tick marks. Nice, round y steps that adapt to
+    # each creator's range (LTT lands on 10k steps, small creators get
+    # sensibly-scaled ones).
     ax.xaxis.set_major_locator(mdates.YearLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
-    ax.xaxis.set_minor_locator(mdates.MonthLocator())
-    # Nice, round y ticks that adapt to each creator's range (LTT still lands on
-    # 5k steps; small creators get sensibly-scaled labels instead of only "0").
     ax.yaxis.set_major_locator(MaxNLocator(nbins=8, steps=[1, 2, 2.5, 5, 10]))
-    ax.yaxis.set_minor_locator(AutoMinorLocator())
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f'{int(v):,}'))
-    ax.tick_params(which='major', length=6)
-    ax.tick_params(which='minor', length=3)
+    ax.tick_params(length=0, labelcolor=LABEL_GREY)
 
-    # Instead of gridlines: light dots on a lattice of quarters (x) and 5k (y).
-    xmin, xmax = ax.get_xlim()
-    ymin, ymax = ax.get_ylim()
-    quarters = mdates.MonthLocator(bymonth=[1, 4, 7, 10])
-    q_ticks = quarters.tick_values(mdates.num2date(xmin), mdates.num2date(xmax))
-    xs = [t for t in q_ticks if xmin <= t <= xmax]
-    ys = [t for t in ax.get_yticks() if ymin <= t <= ymax]
-    ax.scatter([x for x in xs for _ in ys], [y for _ in xs for y in ys],
-               s=6, color='#ccc', edgecolors='none', zorder=0)
+    # No axis lines: light horizontal gridlines, a darker zero baseline, and
+    # the y values written on top of their gridline at the left edge.
+    ax.spines[['left', 'bottom', 'top', 'right']].set_visible(False)
+    ax.yaxis.grid(True, color=GRID_GREY, linewidth=1)
+    ax.set_axisbelow(True)
+    ax.axhline(0, color=BASELINE_GREY, linewidth=1.2, zorder=2)
+    ax.tick_params(axis='y', labelleft=False)
+    ymax = ax.get_ylim()[1]
+    for y in ax.get_yticks():
+        if 0 < y <= ymax:
+            ax.annotate(f'{int(y):,}', (0, y), xycoords=('axes fraction', 'data'), xytext=(0, 3),
+                        textcoords='offset points', ha='left', va='bottom', fontsize=12, color=LABEL_GREY)
 
-    # Drop the box (top/right spines).
-    ax.spines[['top', 'right']].set_visible(False)
-
-    fig.autofmt_xdate()
     plt.tight_layout()
     slug = creator_filename(name)
     with atomic_write(f'{out_dir}/plot_{slug}.svg') as tmp:
@@ -129,3 +151,4 @@ def plot_creator(name, df, out_dir):
         fig.savefig(tmp, format='png', dpi=100, facecolor='white')
     plt.close(fig)
     return gap_note
+
