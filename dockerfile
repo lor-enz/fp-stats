@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends cron vim \
 WORKDIR /app
 COPY crontab /etc/cron.d/fp-stats
 COPY src/*.py /app/
+COPY src/static/ /app/static/
 COPY src/requirements.txt /app/requirements.txt
 
 RUN pip3 install -r /app/requirements.txt
