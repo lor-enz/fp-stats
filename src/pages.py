@@ -1,13 +1,17 @@
 import datetime
+import filecmp
 import os
+import shutil
 import traceback
 
 from data import load_creators, load_creator_data, compute_stats, creator_filename
 from charts import plot_creator, sparkline_svg, OG_IMAGE_W, OG_IMAGE_H
 from atomic import atomic_write
-from favicon import write_favicons
 
 PLOT_FOLDER = "/plots"
+
+# Fixed files copied into the output folder as-is (favicons).
+STATIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 # Absolute base URL, needed for OpenGraph tags (they can't use relative paths).
 BASE_URL = "https://fp-stats.com"
@@ -215,9 +219,20 @@ def attempt(what, fn, *args, **kwargs):
         return False, None
 
 
+def copy_static(out_dir):
+    """Copy only what's missing or changed, so the files' timestamps (and with
+    them nginx's cache headers) stay put between runs."""
+    for name in os.listdir(STATIC_FOLDER):
+        src, dst = f'{STATIC_FOLDER}/{name}', f'{out_dir}/{name}'
+        if os.path.exists(dst) and filecmp.cmp(src, dst, shallow=False):
+            continue
+        with atomic_write(dst) as tmp:
+            shutil.copyfile(src, tmp)
+
+
 def build_site():
     os.makedirs(PLOT_FOLDER, exist_ok=True)
-    attempt("write favicons", write_favicons, PLOT_FOLDER)
+    attempt("copy static files", copy_static, PLOT_FOLDER)
     creators_data = []
     for name, left in load_creators():
         ok, df = attempt(f"load {name}", load_creator_data, name)
