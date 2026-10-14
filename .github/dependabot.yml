@@ -9,6 +9,7 @@
 #
 # Version updates are checked monthly and grouped into one PR per ecosystem.
 # Security updates arrive as soon as an advisory is published, also grouped.
+# Every PR is assigned to lor-enz, so it shows up as a phone notification.
 
 version: 2
 updates:
@@ -16,6 +17,7 @@ updates:
     directory: "/src"
     schedule:
       interval: "monthly"
+    assignees: ["lor-enz"]
     groups:
       python-security:
         applies-to: security-updates
@@ -28,11 +30,13 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    assignees: ["lor-enz"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
+    assignees: ["lor-enz"]
     groups:
       actions:
         patterns: ["*"]
