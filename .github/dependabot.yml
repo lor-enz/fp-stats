@@ -1,0 +1,38 @@
+# Dependabot: opens pull requests when something this image depends on has a
+# newer version. CI builds each PR and runs the smoke test, so a green PR is
+# safe to merge; merging pushes a new image that saturn picks up.
+#
+# - pip: all packages in src/requirements.txt are pinned (including
+#   sub-dependencies), so without this nothing would ever update.
+# - docker: the python base image in ./dockerfile
+# - github-actions: the actions used in .github/workflows
+#
+# Version updates are checked monthly and grouped into one PR per ecosystem.
+# Security updates arrive as soon as an advisory is published, also grouped.
+
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/src"
+    schedule:
+      interval: "monthly"
+    groups:
+      python-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      python:
+        applies-to: version-updates
+        patterns: ["*"]
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      actions:
+        patterns: ["*"]
