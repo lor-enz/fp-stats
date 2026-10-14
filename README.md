@@ -53,7 +53,7 @@ services:
 
 1. Make changes and push them to `main`.
 2. Wait for the Docker Hub build action to complete.
-3. On saturn, pull the new image, restart the container, and trigger a run immediately:
+3. A server that pulls new images regularly picks the change up on its own. To deploy right away instead, pull the new image, restart the container, and trigger a run immediately on the server:
 
         docker compose pull fp-stats && docker compose up -d fp-stats && docker exec fp-stats python3 /app/main.py
 
