@@ -35,14 +35,17 @@ services:
 
 - **/plots** is the container path where the output plots are sent to. Choose a host path that enables publishing the html plot files in a streamlined way.
 
-## Continuous integration
+## Automatic builds and dependency updates
 
-GitHub Actions (`.github/workflows/docker-publish.yml`) handle the build:
+**Docker image.** GitHub Actions (`.github/workflows/docker-publish.yml`) builds the image and runs `tests/smoke.py` inside it, which renders the whole site from sample data. Pull requests are only checked. Pushes to `main`, a weekly run (Mondays) and manual runs also push `nicepenguin/fp-stats:latest` and `:<commit>` to Docker Hub. The weekly run picks up base-image fixes without code changes. The image is never built on the server. A server stays current if it regularly pulls `:latest` and recreates the container, e.g. with a daily `docker compose pull && docker compose up -d`.
 
-- **On every push and pull request**, a smoke check runs `python -m py_compile src/*.py` to catch syntax errors before they can reach an image.
-- **On push to `main`**, once the smoke check passes, the image is built and pushed to Docker Hub as `nicepenguin/fp-stats:latest` and `nicepenguin/fp-stats:<commit-sha>`.
+**Dependabot** (`.github/dependabot.yml`) opens grouped pull requests for the pinned Python packages, the base image and GitHub Actions: monthly, security fixes immediately. Since every package is pinned, nothing updates without these pull requests.
 
-The image is never built on the server. Saturn only pulls the prebuilt image.
+**Maintenance**
+- Merge Dependabot pull requests once their checks are green. Don't merge red ones; check the failing step first.
+- Updates to matplotlib or pandas can pass the smoke test and still change how the charts look. Preview the charts before merging those.
+- Pushing needs the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. Renew the token before it expires.
+- Check now and then that the weekly build is green. A failing run means updates have stopped.
 
 ## Development
 
