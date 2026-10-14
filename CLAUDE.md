@@ -27,7 +27,9 @@ On the dev machine (vega) relatively up to date data is found in /home/lorenz/fp
 - SWAG is serving fp-stats.com through `EXTRA_DOMAINS=fp-stats.com, www.fp-stats.com` .
 - Container timezone: `UTC`.
 
-**saturn never has the source code — this is on purpose.** Lorenz wants to keep code handling simple. Only the dev machine (vega) holds the source. Saturn pulls the prebuilt image and runs it; it never builds. The image is built and pushed to Docker Hub (by CI, on push to `main`), and saturn's compose pulls that image.
+**saturn never has the source code — this is on purpose.** Lorenz wants to keep code handling simple. Only the dev machine (vega) holds the source. Saturn pulls the prebuilt image and runs it; it never builds. The image is built and pushed to Docker Hub (by CI, on push to `main` and weekly on Mondays to pick up base-image fixes), and saturn's compose pulls that image. Saturn's daily update script deploys new images automatically.
+
+Dependabot (`.github/dependabot.yml`) opens grouped PRs for the pinned Python packages, the base image and the GitHub Actions. CI runs the smoke test on each; green ones are safe to merge.
 
 ---
 
