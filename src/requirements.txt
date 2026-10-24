@@ -1,7 +1,7 @@
 # All packages pinned, including sub-dependencies, so every image build installs
 # exactly the same versions. Direct dependencies: matplotlib, pandas, requests.
 # Regenerate: uv pip compile --python-version 3.14 --no-header --no-annotate <direct deps>
-certifi==2026.7.22
+certifi==2026.10.19
 charset-normalizer==3.5.2
 contourpy==1.4.0
 cycler==0.12.1
